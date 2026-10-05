@@ -82,6 +82,7 @@ interface DbListaRow {
 interface DbUsuarioRow {
   id: string;
   nombre: string;
+  email?: string | null;
   password: string;
 }
 
@@ -128,6 +129,7 @@ export async function fetchAllDataFromSupabase(): Promise<{
     ? ((usersRes.data ?? []) as DbUsuarioRow[]).map((u) => ({
         id: u.id,
         nombre: u.nombre,
+        ...(u.email ? { email: u.email } : {}),
         password: u.password,
       }))
     : [];
@@ -187,9 +189,50 @@ export async function createUserInSupabase(user: AppUser): Promise<void> {
   const { error } = await supabase.from('usuarios').insert({
     id: user.id,
     nombre: user.nombre,
+    email: user.email || null,
     password: user.password,
   });
-  if (error) throw error;
+
+  // Si aún no se ha ejecutado el ALTER TABLE para añadir la columna email, insertar sin email
+  if (error) {
+    const { error: fallbackErr } = await supabase.from('usuarios').insert({
+      id: user.id,
+      nombre: user.nombre,
+      password: user.password,
+    });
+    if (fallbackErr) throw fallbackErr;
+  }
+}
+
+export async function updateUserProfileInSupabase(
+  userId: string,
+  data: { nombre: string; email?: string }
+): Promise<void> {
+  if (!supabase) return;
+
+  const { error } = await supabase
+    .from('usuarios')
+    .update({
+      nombre: data.nombre,
+      email: data.email || null,
+    })
+    .eq('id', userId);
+
+  if (error) {
+    const { error: fallbackErr } = await supabase
+      .from('usuarios')
+      .update({
+        nombre: data.nombre,
+      })
+      .eq('id', userId);
+    if (fallbackErr) throw fallbackErr;
+  }
+
+  // Actualizar también el nombre cacheado en listas_compra de este usuario
+  await supabase
+    .from('listas_compra')
+    .update({ usuario_nombre: data.nombre })
+    .eq('usuario_id', userId);
 }
 
 export async function updateUserPasswordInSupabase(

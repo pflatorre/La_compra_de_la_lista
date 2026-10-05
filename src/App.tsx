@@ -17,6 +17,7 @@ import {
   isSupabaseConfigured,
   fetchAllDataFromSupabase,
   createUserInSupabase,
+  updateUserProfileInSupabase,
   updateUserPasswordInSupabase,
   insertCatalogProductInSupabase,
   createShoppingListInSupabase,
@@ -29,6 +30,9 @@ import { HomeScreen } from './components/HomeScreen';
 import { ListEditorScreen } from './components/ListEditorScreen';
 import { ShoppingModeScreen } from './components/ShoppingModeScreen';
 import { HistoryScreen } from './components/HistoryScreen';
+import { SettingsScreen } from './components/SettingsScreen';
+import { UsersManagementScreen } from './components/UsersManagementScreen';
+import { EditUserScreen } from './components/EditUserScreen';
 
 export default function App() {
   const [lists, setLists] = useState<ShoppingList[]>(() => loadLists());
@@ -112,6 +116,36 @@ export default function App() {
       );
     }
   }, []);
+
+  const handleUpdateUserProfile = useCallback(
+    (userId: string, data: { nombre: string; email: string }) => {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === userId
+            ? {
+                ...u,
+                nombre: data.nombre,
+                ...(data.email ? { email: data.email } : { email: undefined }),
+              }
+            : u
+        )
+      );
+      setLists((prev) =>
+        prev.map((l) =>
+          l.usuarioId === userId ? { ...l, usuarioNombre: data.nombre } : l
+        )
+      );
+
+      if (isSupabaseConfigured) {
+        updateUserProfileInSupabase(userId, data).catch((err) =>
+          console.error('Error actualizando usuario en Supabase:', err)
+        );
+      }
+
+      setView({ type: 'users' });
+    },
+    []
+  );
 
   const handleUpdateUserPassword = useCallback(
     (userId: string, newPassword: string) => {
@@ -304,6 +338,57 @@ export default function App() {
     }
   }, []);
 
+  if (view.type === 'settings') {
+    return (
+      <SettingsScreen
+        theme={theme}
+        usersCount={users.length}
+        onToggleTheme={handleToggleTheme}
+        onOpenUsersManagement={() => setView({ type: 'users' })}
+        onBack={() => setView({ type: 'home' })}
+      />
+    );
+  }
+
+  if (view.type === 'users') {
+    return (
+      <UsersManagementScreen
+        users={users}
+        onSelectVerifiedUserForEdit={(userId) =>
+          setView({ type: 'editUser', userId })
+        }
+        onUpdateUserPassword={handleUpdateUserPassword}
+        onPasswordChangeComplete={() => setView({ type: 'home' })}
+        onBack={() => setView({ type: 'settings' })}
+      />
+    );
+  }
+
+  if (view.type === 'editUser') {
+    const targetUser = users.find((u) => u.id === view.userId);
+    if (!targetUser) {
+      return (
+        <UsersManagementScreen
+          users={users}
+          onSelectVerifiedUserForEdit={(userId) =>
+            setView({ type: 'editUser', userId })
+          }
+          onUpdateUserPassword={handleUpdateUserPassword}
+          onPasswordChangeComplete={() => setView({ type: 'home' })}
+          onBack={() => setView({ type: 'settings' })}
+        />
+      );
+    }
+
+    return (
+      <EditUserScreen
+        user={targetUser}
+        onSaveUser={handleUpdateUserProfile}
+        onBack={() => setView({ type: 'users' })}
+      />
+    );
+  }
+
   if (view.type === 'create') {
     return (
       <ListEditorScreen
@@ -325,8 +410,7 @@ export default function App() {
         <HomeScreen
           lists={lists}
           users={users}
-          theme={theme}
-          onToggleTheme={handleToggleTheme}
+          onOpenSettings={() => setView({ type: 'settings' })}
           onNewList={() => setView({ type: 'create' })}
           onOpenHistory={() => setView({ type: 'history' })}
           onStartShopping={handleStartShopping}
@@ -358,8 +442,7 @@ export default function App() {
         <HomeScreen
           lists={lists}
           users={users}
-          theme={theme}
-          onToggleTheme={handleToggleTheme}
+          onOpenSettings={() => setView({ type: 'settings' })}
           onNewList={() => setView({ type: 'create' })}
           onOpenHistory={() => setView({ type: 'history' })}
           onStartShopping={handleStartShopping}
@@ -394,8 +477,7 @@ export default function App() {
     <HomeScreen
       lists={lists}
       users={users}
-      theme={theme}
-      onToggleTheme={handleToggleTheme}
+      onOpenSettings={() => setView({ type: 'settings' })}
       onNewList={() => setView({ type: 'create' })}
       onOpenHistory={() => setView({ type: 'history' })}
       onStartShopping={handleStartShopping}

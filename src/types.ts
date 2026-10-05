@@ -3,6 +3,7 @@ export type ShoppingListStatus = 'pendiente' | 'en curso' | 'realizada';
 export interface AppUser {
   id: string;
   nombre: string;
+  email?: string;
   password: string; // 4 dígitos numéricos (0-9)
 }
 
@@ -30,4 +31,7 @@ export type ScreenView =
   | { type: 'create' }
   | { type: 'edit'; listId: string }
   | { type: 'shopping'; listId: string }
-  | { type: 'history' };
+  | { type: 'history' }
+  | { type: 'settings' }
+  | { type: 'users' }
+  | { type: 'editUser'; userId: string };

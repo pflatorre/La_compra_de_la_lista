@@ -1,14 +1,12 @@
 import React from 'react';
-import { Plus, History, Sun, Moon, ShoppingBasket, ShoppingCart } from 'lucide-react';
+import { Plus, History, Settings, ShoppingBasket, ShoppingCart } from 'lucide-react';
 import { AppUser, ShoppingList } from '../types';
-import { ThemeMode } from '../utils/storage';
 import { ListCard } from './ListCard';
 
 interface HomeScreenProps {
   lists: ShoppingList[];
   users: AppUser[];
-  theme: ThemeMode;
-  onToggleTheme: () => void;
+  onOpenSettings: () => void;
   onNewList: () => void;
   onOpenHistory: () => void;
   onStartShopping: (listId: string) => void;
@@ -20,8 +18,7 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   lists,
   users,
-  theme,
-  onToggleTheme,
+  onOpenSettings,
   onNewList,
   onOpenHistory,
   onStartShopping,
@@ -91,20 +88,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           <button
             type="button"
-            onClick={onToggleTheme}
-            aria-label={
-              theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'
-            }
-            title={
-              theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'
-            }
-            className="min-h-[52px] min-w-[52px] rounded-2xl bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-[0.98] text-stone-700 dark:text-stone-200 border border-stone-200/90 dark:border-stone-800 flex items-center justify-center shadow-xs transition-all shrink-0"
+            onClick={onOpenSettings}
+            aria-label="Configuración"
+            title="Configuración"
+            className="min-h-[52px] px-3.5 py-3 rounded-2xl bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-[0.98] text-stone-700 dark:text-stone-200 border border-stone-200/90 dark:border-stone-800 font-semibold text-base flex items-center justify-center gap-2 shadow-xs transition-all shrink-0 whitespace-nowrap"
           >
-            {theme === 'dark' ? (
-              <Sun className="w-5 h-5 text-amber-400" />
-            ) : (
-              <Moon className="w-5 h-5 text-stone-700" />
-            )}
+            <Settings className="w-5 h-5 text-stone-600 dark:text-stone-300 shrink-0" />
+            <span className="hidden sm:inline">Configuración</span>
           </button>
         </nav>
 

@@ -37,6 +37,7 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPin, setNewUserPin] = useState('');
   const [showCreateKeypad, setShowCreateKeypad] = useState(false);
   const [pendingVerifyUser, setPendingVerifyUser] = useState<AppUser | null>(
@@ -63,19 +64,26 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownOpen]);
 
-  const completeUserCreation = (nameToUse: string, pinToUse: string) => {
-    const trimmed = nameToUse.trim();
-    if (!trimmed || pinToUse.length !== 4) return;
+  const completeUserCreation = (
+    nameToUse: string,
+    emailToUse: string,
+    pinToUse: string
+  ) => {
+    const trimmedName = nameToUse.trim();
+    const trimmedEmail = emailToUse.trim();
+    if (!trimmedName || pinToUse.length !== 4) return;
 
     const created: AppUser = {
       id: generateId(),
-      nombre: trimmed,
+      nombre: trimmedName,
+      ...(trimmedEmail ? { email: trimmedEmail } : {}),
       password: pinToUse,
     };
 
     onCreateUser(created);
     onSelectVerifiedUser(created);
     setNewUserName('');
+    setNewUserEmail('');
     setNewUserPin('');
     setRegisterError(null);
     setShowRegisterForm(false);
@@ -88,7 +96,7 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
 
     // Si ya se había escrito el nombre, al confirmar el password queda creado y verificado el usuario
     if (newUserName.trim().length > 0) {
-      completeUserCreation(newUserName, pin);
+      completeUserCreation(newUserName, newUserEmail, pin);
     }
   };
 
@@ -101,7 +109,7 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
       setRegisterError('Pulsa en "Generar password" e introduce los 4 números.');
       return;
     }
-    completeUserCreation(newUserName, newUserPin);
+    completeUserCreation(newUserName, newUserEmail, newUserPin);
   };
 
   const handleClickUserOption = (user: AppUser) => {
@@ -260,6 +268,26 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
                   setRegisterError(null);
                 }}
                 placeholder="Ej. Ana, Carlos, Mamá..."
+                className="w-full min-h-[48px] px-3.5 py-2.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-base font-medium focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="new-user-email-input"
+                className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1"
+              >
+                Correo electrónico
+              </label>
+              <input
+                id="new-user-email-input"
+                type="email"
+                value={newUserEmail}
+                onChange={(e) => {
+                  setNewUserEmail(e.target.value);
+                  setRegisterError(null);
+                }}
+                placeholder="Ej. usuario@correo.com"
                 className="w-full min-h-[48px] px-3.5 py-2.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-base font-medium focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
               />
             </div>
