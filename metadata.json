@@ -1,0 +1,6 @@
+{
+  "name": "La Compra de la Lista",
+  "description": "Aplicación web mobile-first en español para gestionar tus listas de la compra del supermercado con autocompletado de productos, modo compra en tiempo real e histórico.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
