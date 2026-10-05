@@ -18,6 +18,7 @@ interface ListCardProps {
   onStartShopping: (listId: string) => void;
   onEditList: (listId: string) => void;
   onDeleteList: (listId: string) => void;
+  onUpdateUserPassword: (userId: string, newPassword: string) => void;
 }
 
 export const ListCard: React.FC<ListCardProps> = ({
@@ -26,6 +27,7 @@ export const ListCard: React.FC<ListCardProps> = ({
   onStartShopping,
   onEditList,
   onDeleteList,
+  onUpdateUserPassword,
 }) => {
   const [menuStep, setMenuStep] = useState<'closed' | 'actions' | 'confirmDelete'>('closed');
   const [showPinVerify, setShowPinVerify] = useState(false);
@@ -167,6 +169,9 @@ export const ListCard: React.FC<ListCardProps> = ({
           mode="verify"
           userName={creatorUser.nombre}
           expectedPin={creatorUser.password}
+          onChangePassword={(newPin) =>
+            onUpdateUserPassword(creatorUser.id, newPin)
+          }
           onSuccess={() => {
             setShowPinVerify(false);
             setMenuStep('actions');

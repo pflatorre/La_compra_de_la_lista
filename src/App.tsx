@@ -17,6 +17,7 @@ import {
   isSupabaseConfigured,
   fetchAllDataFromSupabase,
   createUserInSupabase,
+  updateUserPasswordInSupabase,
   insertCatalogProductInSupabase,
   createShoppingListInSupabase,
   updateShoppingListInSupabase,
@@ -111,6 +112,22 @@ export default function App() {
       );
     }
   }, []);
+
+  const handleUpdateUserPassword = useCallback(
+    (userId: string, newPassword: string) => {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === userId ? { ...u, password: newPassword } : u
+        )
+      );
+      if (isSupabaseConfigured) {
+        updateUserPasswordInSupabase(userId, newPassword).catch((err) =>
+          console.error('Error actualizando contraseña en Supabase:', err)
+        );
+      }
+    },
+    []
+  );
 
   const handleAddCatalogProduct = useCallback((productName: string) => {
     setCatalog((prev) => addProductToCatalog(prev, productName));
@@ -293,6 +310,7 @@ export default function App() {
         users={users}
         catalog={catalog}
         onCreateUser={handleCreateUser}
+        onUpdateUserPassword={handleUpdateUserPassword}
         onAddCatalogProduct={handleAddCatalogProduct}
         onSaveList={handleCreateList}
         onBack={() => setView({ type: 'home' })}
@@ -314,6 +332,7 @@ export default function App() {
           onStartShopping={handleStartShopping}
           onEditList={(id) => setView({ type: 'edit', listId: id })}
           onDeleteList={handleDeleteList}
+          onUpdateUserPassword={handleUpdateUserPassword}
         />
       );
     }
@@ -324,6 +343,7 @@ export default function App() {
         users={users}
         catalog={catalog}
         onCreateUser={handleCreateUser}
+        onUpdateUserPassword={handleUpdateUserPassword}
         onAddCatalogProduct={handleAddCatalogProduct}
         onSaveList={(data) => handleUpdateList(targetList.id, data)}
         onBack={() => setView({ type: 'home' })}
@@ -345,6 +365,7 @@ export default function App() {
           onStartShopping={handleStartShopping}
           onEditList={(id) => setView({ type: 'edit', listId: id })}
           onDeleteList={handleDeleteList}
+          onUpdateUserPassword={handleUpdateUserPassword}
         />
       );
     }
@@ -380,6 +401,7 @@ export default function App() {
       onStartShopping={handleStartShopping}
       onEditList={(id) => setView({ type: 'edit', listId: id })}
       onDeleteList={handleDeleteList}
+      onUpdateUserPassword={handleUpdateUserPassword}
     />
   );
 }

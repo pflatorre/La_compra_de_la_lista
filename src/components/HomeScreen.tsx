@@ -14,6 +14,7 @@ interface HomeScreenProps {
   onStartShopping: (listId: string) => void;
   onEditList: (listId: string) => void;
   onDeleteList: (listId: string) => void;
+  onUpdateUserPassword: (userId: string, newPassword: string) => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -26,6 +27,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onStartShopping,
   onEditList,
   onDeleteList,
+  onUpdateUserPassword,
 }) => {
   // Listas NO realizadas (pendientes y en curso), ordenadas por fecha de compra de la más próxima a la más lejana
   const activeLists = lists
@@ -53,7 +55,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               La Compra de la Lista
             </h1>
             <p className="mt-0.5 text-sm text-stone-600 dark:text-stone-400">
-              Organiza tu cesta y marca tus productos en el supermercado
+              Crea y gestiona tus listas de la compra...{' '}
+              <em className="italic">by PabloFL</em>
             </p>
           </div>
         </header>
@@ -126,6 +129,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   onStartShopping={onStartShopping}
                   onEditList={onEditList}
                   onDeleteList={onDeleteList}
+                  onUpdateUserPassword={onUpdateUserPassword}
                 />
               ))}
             </div>

@@ -11,6 +11,7 @@ interface ListEditorScreenProps {
   users: AppUser[];
   catalog: string[];
   onCreateUser: (newUser: AppUser) => void;
+  onUpdateUserPassword: (userId: string, newPassword: string) => void;
   onAddCatalogProduct: (productName: string) => void;
   onSaveList: (data: {
     nombre: string;
@@ -37,6 +38,7 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
   users,
   catalog,
   onCreateUser,
+  onUpdateUserPassword,
   onAddCatalogProduct,
   onSaveList,
   onBack,
@@ -240,6 +242,8 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
               selectedUserId={selectedUserId}
               isUserVerified={isUserVerified}
               hasError={validationErrors.some((err) => err.includes('usuario'))}
+              onUpdateUserPassword={onUpdateUserPassword}
+              onPasswordChangeComplete={onBack}
               onSelectVerifiedUser={(user) => {
                 setSelectedUserId(user.id);
                 setIsUserVerified(true);

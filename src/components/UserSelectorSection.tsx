@@ -20,6 +20,8 @@ interface UserSelectorSectionProps {
   hasError?: boolean;
   onSelectVerifiedUser: (user: AppUser) => void;
   onCreateUser: (newUser: AppUser) => void;
+  onUpdateUserPassword: (userId: string, newPassword: string) => void;
+  onPasswordChangeComplete?: () => void;
 }
 
 export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
@@ -29,6 +31,8 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
   hasError,
   onSelectVerifiedUser,
   onCreateUser,
+  onUpdateUserPassword,
+  onPasswordChangeComplete,
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showRegisterForm, setShowRegisterForm] = useState(false);
@@ -318,6 +322,16 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
           mode="verify"
           userName={pendingVerifyUser.nombre}
           expectedPin={pendingVerifyUser.password}
+          onChangePassword={(newPin) => {
+            onUpdateUserPassword(pendingVerifyUser.id, newPin);
+            setPendingVerifyUser((prev) =>
+              prev ? { ...prev, password: newPin } : null
+            );
+          }}
+          onPasswordChangeComplete={() => {
+            setPendingVerifyUser(null);
+            onPasswordChangeComplete?.();
+          }}
           onSuccess={() => {
             const verified = pendingVerifyUser;
             setPendingVerifyUser(null);

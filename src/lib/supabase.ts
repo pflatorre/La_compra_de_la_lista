@@ -192,6 +192,18 @@ export async function createUserInSupabase(user: AppUser): Promise<void> {
   if (error) throw error;
 }
 
+export async function updateUserPasswordInSupabase(
+  userId: string,
+  newPassword: string
+): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('usuarios')
+    .update({ password: newPassword })
+    .eq('id', userId);
+  if (error) throw error;
+}
+
 export async function insertCatalogProductInSupabase(
   nombre: string
 ): Promise<void> {

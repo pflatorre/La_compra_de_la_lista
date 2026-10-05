@@ -1,5 +1,13 @@
-import React, { useState } from 'react';
-import { Delete, KeyRound, Lock, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Delete,
+  KeyRound,
+  Lock,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+} from 'lucide-react';
 
 interface NumericKeypadModalProps {
   mode: 'create' | 'verify';
@@ -7,9 +15,20 @@ interface NumericKeypadModalProps {
   expectedPin?: string;
   onSuccess: (pin: string) => void;
   onCancel: () => void;
+  onChangePassword?: (newPin: string) => void;
+  onPasswordChangeComplete?: () => void;
 }
 
 const KEYPAD_NUMBERS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+type KeypadStage =
+  | 'createFirst'
+  | 'createConfirm'
+  | 'verifyUnlock'
+  | 'changeVerifyCurrent'
+  | 'changeNewFirst'
+  | 'changeNewConfirm'
+  | 'changeSuccess';
 
 export const NumericKeypadModal: React.FC<NumericKeypadModalProps> = ({
   mode,
@@ -17,54 +36,102 @@ export const NumericKeypadModal: React.FC<NumericKeypadModalProps> = ({
   expectedPin,
   onSuccess,
   onCancel,
+  onChangePassword,
+  onPasswordChangeComplete,
 }) => {
-  const [step, setStep] = useState<'first' | 'confirm'>('first');
+  const [stage, setStage] = useState<KeypadStage>(() =>
+    mode === 'create' ? 'createFirst' : 'verifyUnlock'
+  );
+  const [activeExpectedPin, setActiveExpectedPin] = useState(expectedPin ?? '');
   const [firstPin, setFirstPin] = useState('');
   const [currentDigits, setCurrentDigits] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (expectedPin !== undefined) {
+      setActiveExpectedPin(expectedPin);
+    }
+  }, [expectedPin]);
+
   const handleDigitPress = (digit: string) => {
-    if (currentDigits.length >= 4) return;
+    if (currentDigits.length >= 4 || stage === 'changeSuccess') return;
     setErrorMsg(null);
 
     const next = currentDigits + digit;
     setCurrentDigits(next);
 
     if (next.length === 4) {
-      if (mode === 'create') {
-        if (step === 'first') {
-          // Pasar a la segunda confirmación tras un breve instante visual
-          setTimeout(() => {
-            setFirstPin(next);
-            setCurrentDigits('');
-            setStep('confirm');
-          }, 160);
-        } else {
-          // Confirmando por segunda vez
-          setTimeout(() => {
-            if (next === firstPin) {
-              onSuccess(next);
-            } else {
-              setErrorMsg(
-                'Los 4 números no coinciden. Introduce de nuevo el password desde el principio.'
-              );
-              setFirstPin('');
-              setCurrentDigits('');
-              setStep('first');
-            }
-          }, 160);
+      setTimeout(() => {
+        if (stage === 'createFirst') {
+          setFirstPin(next);
+          setCurrentDigits('');
+          setStage('createConfirm');
+          return;
         }
-      } else {
-        // mode === 'verify'
-        setTimeout(() => {
-          if (next === expectedPin) {
+
+        if (stage === 'createConfirm') {
+          if (next === firstPin) {
             onSuccess(next);
           } else {
-            setErrorMsg('Password incorrecto. Inténtalo de nuevo.');
+            setErrorMsg(
+              'Los 4 números no coinciden. Introduce de nuevo el password desde el principio.'
+            );
+            setFirstPin('');
+            setCurrentDigits('');
+            setStage('createFirst');
+          }
+          return;
+        }
+
+        if (stage === 'verifyUnlock') {
+          if (next === activeExpectedPin) {
+            onSuccess(next);
+          } else {
+            setErrorMsg('Contraseña incorrecta. Inténtalo de nuevo.');
             setCurrentDigits('');
           }
-        }, 160);
-      }
+          return;
+        }
+
+        if (stage === 'changeVerifyCurrent') {
+          if (next === activeExpectedPin) {
+            setCurrentDigits('');
+            setErrorMsg(null);
+            setStage('changeNewFirst');
+          } else {
+            setErrorMsg(
+              'La contraseña actual no es correcta. Inténtalo de nuevo.'
+            );
+            setCurrentDigits('');
+          }
+          return;
+        }
+
+        if (stage === 'changeNewFirst') {
+          setFirstPin(next);
+          setCurrentDigits('');
+          setErrorMsg(null);
+          setStage('changeNewConfirm');
+          return;
+        }
+
+        if (stage === 'changeNewConfirm') {
+          if (next === firstPin) {
+            setActiveExpectedPin(next);
+            setCurrentDigits('');
+            setErrorMsg(null);
+            onChangePassword?.(next);
+            setStage('changeSuccess');
+          } else {
+            setErrorMsg(
+              'Las dos contraseñas nuevas no coinciden. Introduce de nuevo la nueva contraseña.'
+            );
+            setFirstPin('');
+            setCurrentDigits('');
+            setStage('changeNewFirst');
+          }
+        }
+      }, 160);
     }
   };
 
@@ -78,15 +145,96 @@ export const NumericKeypadModal: React.FC<NumericKeypadModalProps> = ({
     setCurrentDigits('');
   };
 
+  const handleStartChangePassword = () => {
+    setErrorMsg(null);
+    setFirstPin('');
+    setCurrentDigits('');
+    setStage('changeVerifyCurrent');
+  };
+
+  // Diálogo de confirmación cuando la contraseña se ha cambiado correctamente
+  if (stage === 'changeSuccess') {
+    return (
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-label="Contraseña cambiada correctamente"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+      >
+        <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl p-6 text-center animate-in zoom-in-95 duration-150">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-8 h-8 stroke-[2.25]" />
+          </div>
+
+          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100">
+            Contraseña cambiada correctamente
+          </h2>
+
+          <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
+            La contraseña de{' '}
+            <span className="font-semibold text-stone-900 dark:text-stone-200">
+              {userName || 'este usuario'}
+            </span>{' '}
+            ha sido actualizada y ya está activa para el uso de la aplicación.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (onPasswordChangeComplete) {
+                onPasswordChangeComplete();
+              } else {
+                onCancel();
+              }
+            }}
+            className="mt-6 w-full min-h-[50px] px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-sm flex items-center justify-center transition-all shadow-sm"
+          >
+            Aceptar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const getHeaderTitle = () => {
+    switch (stage) {
+      case 'createFirst':
+        return 'Generar password (1/2)';
+      case 'createConfirm':
+        return 'Confirmar password (2/2)';
+      case 'verifyUnlock':
+        return 'Desbloquear lista';
+      case 'changeVerifyCurrent':
+        return 'Cambiar contraseña';
+      case 'changeNewFirst':
+        return 'Nueva contraseña (1/2)';
+      case 'changeNewConfirm':
+        return 'Confirmar nueva contraseña (2/2)';
+    }
+  };
+
+  const getHeaderSubtitle = () => {
+    switch (stage) {
+      case 'createFirst':
+        return 'Marca 4 números en el teclado (0 al 9)';
+      case 'createConfirm':
+        return 'Repite los mismos 4 números para confirmar';
+      case 'verifyUnlock':
+        return `Introduce los 4 números de ${userName || 'este usuario'}`;
+      case 'changeVerifyCurrent':
+        return `Introduce la contraseña actual de ${userName || 'este usuario'}`;
+      case 'changeNewFirst':
+        return 'Introduce los 4 números de la nueva contraseña';
+      case 'changeNewConfirm':
+        return 'Repite por segunda vez la nueva contraseña';
+    }
+  };
+
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={
-        mode === 'create'
-          ? 'Teclado numérico para crear password'
-          : `Introducir password de ${userName ?? 'usuario'}`
-      }
+      aria-label={getHeaderTitle()}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCancel();
@@ -97,26 +245,20 @@ export const NumericKeypadModal: React.FC<NumericKeypadModalProps> = ({
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              {mode === 'create' ? (
-                <KeyRound className="w-5 h-5" />
-              ) : (
+              {stage === 'verifyUnlock' ? (
                 <Lock className="w-5 h-5" />
+              ) : stage.startsWith('change') ? (
+                <RefreshCw className="w-5 h-5" />
+              ) : (
+                <KeyRound className="w-5 h-5" />
               )}
             </div>
             <div>
               <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">
-                {mode === 'create'
-                  ? step === 'first'
-                    ? 'Generar password (1/2)'
-                    : 'Confirmar password (2/2)'
-                  : 'Desbloquear lista'}
+                {getHeaderTitle()}
               </h2>
               <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5">
-                {mode === 'create'
-                  ? step === 'first'
-                    ? 'Marca 4 números en el teclado (0 al 9)'
-                    : 'Repite los mismos 4 números para confirmar'
-                  : `Introduce los 4 números de ${userName || 'este usuario'}`}
+                {getHeaderSubtitle()}
               </p>
             </div>
           </div>
@@ -150,11 +292,25 @@ export const NumericKeypadModal: React.FC<NumericKeypadModalProps> = ({
           })}
         </div>
 
-        {/* Paso de confirmación o mensaje de error */}
-        {mode === 'create' && step === 'confirm' && !errorMsg && (
+        {/* Avisos de pasos intermedios */}
+        {stage === 'createConfirm' && !errorMsg && (
           <div className="mb-3 px-3 py-2 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-medium flex items-center justify-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>Primer código registrado. Vuelve a introducirlo.</span>
+          </div>
+        )}
+
+        {stage === 'changeNewFirst' && !errorMsg && (
+          <div className="mb-3 px-3 py-2 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-medium flex items-center justify-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>Contraseña actual verificada. Introduce la nueva.</span>
+          </div>
+        )}
+
+        {stage === 'changeNewConfirm' && !errorMsg && (
+          <div className="mb-3 px-3 py-2 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-medium flex items-center justify-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>Repite la nueva contraseña una segunda vez.</span>
           </div>
         )}
 
@@ -207,14 +363,27 @@ export const NumericKeypadModal: React.FC<NumericKeypadModalProps> = ({
           </button>
         </div>
 
-        {/* Botón cancelar */}
-        <button
-          type="button"
-          onClick={onCancel}
-          className="mt-4 w-full min-h-[46px] rounded-2xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 text-sm font-semibold transition-colors"
-        >
-          Cancelar
-        </button>
+        {/* Botones inferiores: "Cambiar contraseña" (en Desbloquear lista) y "Cancelar" */}
+        <div className="mt-4 flex flex-col gap-2">
+          {stage === 'verifyUnlock' && onChangePassword && (
+            <button
+              type="button"
+              onClick={handleStartChangePassword}
+              className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/70 text-sm font-semibold flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
+            >
+              <KeyRound className="w-4 h-4 shrink-0" />
+              <span>Cambiar contraseña</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onCancel}
+            className="w-full min-h-[46px] rounded-2xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 text-sm font-semibold transition-colors"
+          >
+            Cancelar
+          </button>
+        </div>
       </div>
     </div>
   );
