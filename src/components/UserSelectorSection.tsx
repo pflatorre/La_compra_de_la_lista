@@ -6,6 +6,8 @@ import {
   KeyRound,
   Check,
   X,
+  Lock,
+  ShieldCheck,
 } from 'lucide-react';
 import { AppUser } from '../types';
 import { generateId } from '../utils/storage';
@@ -14,23 +16,28 @@ import { NumericKeypadModal } from './NumericKeypadModal';
 interface UserSelectorSectionProps {
   users: AppUser[];
   selectedUserId: string;
+  isUserVerified: boolean;
   hasError?: boolean;
-  onSelectUser: (user: AppUser) => void;
+  onSelectVerifiedUser: (user: AppUser) => void;
   onCreateUser: (newUser: AppUser) => void;
 }
 
 export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
   users,
   selectedUserId,
+  isUserVerified,
   hasError,
-  onSelectUser,
+  onSelectVerifiedUser,
   onCreateUser,
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [newUserName, setNewUserName] = useState('');
   const [newUserPin, setNewUserPin] = useState('');
-  const [showKeypad, setShowKeypad] = useState(false);
+  const [showCreateKeypad, setShowCreateKeypad] = useState(false);
+  const [pendingVerifyUser, setPendingVerifyUser] = useState<AppUser | null>(
+    null
+  );
   const [registerError, setRegisterError] = useState<string | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -63,7 +70,7 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
     };
 
     onCreateUser(created);
-    onSelectUser(created);
+    onSelectVerifiedUser(created);
     setNewUserName('');
     setNewUserPin('');
     setRegisterError(null);
@@ -71,11 +78,11 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
   };
 
   const handlePinCreated = (pin: string) => {
-    setShowKeypad(false);
+    setShowCreateKeypad(false);
     setNewUserPin(pin);
     setRegisterError(null);
 
-    // Si ya se había puesto el nombre, al confirmar el password de 4 dígitos queda creado automáticamente el usuario
+    // Si ya se había escrito el nombre, al confirmar el password queda creado y verificado el usuario
     if (newUserName.trim().length > 0) {
       completeUserCreation(newUserName, pin);
     }
@@ -93,11 +100,26 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
     completeUserCreation(newUserName, newUserPin);
   };
 
+  const handleClickUserOption = (user: AppUser) => {
+    setDropdownOpen(false);
+    setShowRegisterForm(false);
+    // Al elegir un usuario del desplegable, salta el teclado numérico para pedir su password
+    setPendingVerifyUser(user);
+  };
+
   return (
     <div>
-      <label className="block text-sm font-semibold text-stone-800 dark:text-stone-200 mb-1.5">
-        Usuario de la lista
-      </label>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="block text-sm font-semibold text-stone-800 dark:text-stone-200">
+          Usuario de la lista
+        </label>
+        {selectedUser && isUserVerified && (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+            <ShieldCheck className="w-4 h-4" />
+            <span>Verificado</span>
+          </span>
+        )}
+      </div>
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
         {/* Botón desplegable con las personas registradas */}
@@ -111,19 +133,21 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
                 ? 'border-red-500 bg-red-50/40 dark:bg-red-950/20'
                 : dropdownOpen
                 ? 'border-emerald-600 ring-2 ring-emerald-600/20 bg-white dark:bg-stone-900'
+                : selectedUser && isUserVerified
+                ? 'border-emerald-600/60 dark:border-emerald-500/50 bg-emerald-50/30 dark:bg-emerald-950/20'
                 : 'border-stone-300 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-950 hover:border-stone-400 dark:hover:border-stone-600'
             }`}
           >
             <div className="flex items-center gap-3 min-w-0">
               <User className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              {selectedUser ? (
+              {selectedUser && isUserVerified ? (
                 <span className="font-semibold text-stone-900 dark:text-stone-100 truncate">
                   {selectedUser.nombre}
                 </span>
               ) : (
                 <span className="text-stone-400 dark:text-stone-500 truncate">
                   {users.length > 0
-                    ? 'Selecciona un usuario...'
+                    ? 'Elegir usuario registrado...'
                     : 'No hay usuarios registrados aún'}
                 </span>
               )}
@@ -145,25 +169,29 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
               {users.length > 0 ? (
                 <ul className="max-h-56 overflow-y-auto divide-y divide-stone-100 dark:divide-stone-800">
                   {users.map((u) => {
-                    const isSelected = u.id === selectedUserId;
+                    const isSelected =
+                      u.id === selectedUserId && isUserVerified;
                     return (
                       <li key={u.id}>
                         <button
                           type="button"
-                          onClick={() => {
-                            onSelectUser(u);
-                            setDropdownOpen(false);
-                          }}
+                          onClick={() => handleClickUserOption(u)}
                           className={`w-full min-h-[48px] px-4 py-3 text-left flex items-center justify-between gap-3 transition-colors ${
                             isSelected
                               ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-semibold'
                               : 'text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800'
                           }`}
                         >
-                          <span className="truncate">{u.nombre}</span>
-                          {isSelected && (
-                            <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          )}
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="truncate">{u.nombre}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {isSelected ? (
+                              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            ) : (
+                              <Lock className="w-3.5 h-3.5 text-stone-400" />
+                            )}
+                          </div>
                         </button>
                       </li>
                     );
@@ -237,7 +265,7 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
                 type="button"
                 onClick={() => {
                   setRegisterError(null);
-                  setShowKeypad(true);
+                  setShowCreateKeypad(true);
                 }}
                 className={`flex-1 min-h-[48px] px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all whitespace-nowrap ${
                   newUserPin.length === 4
@@ -274,13 +302,28 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
         </div>
       )}
 
-      {/* Modal con teclado numérico 0-9 para introducir y confirmar 4 dígitos */}
-      {showKeypad && (
+      {/* Modal con teclado numérico 0-9 para CREAR un nuevo usuario (4 números + confirmación) */}
+      {showCreateKeypad && (
         <NumericKeypadModal
           mode="create"
           userName={newUserName.trim()}
           onSuccess={handlePinCreated}
-          onCancel={() => setShowKeypad(false)}
+          onCancel={() => setShowCreateKeypad(false)}
+        />
+      )}
+
+      {/* Modal con teclado numérico 0-9 para VERIFICAR el password al elegir un usuario del desplegable */}
+      {pendingVerifyUser && (
+        <NumericKeypadModal
+          mode="verify"
+          userName={pendingVerifyUser.nombre}
+          expectedPin={pendingVerifyUser.password}
+          onSuccess={() => {
+            const verified = pendingVerifyUser;
+            setPendingVerifyUser(null);
+            onSelectVerifiedUser(verified);
+          }}
+          onCancel={() => setPendingVerifyUser(null)}
         />
       )}
     </div>

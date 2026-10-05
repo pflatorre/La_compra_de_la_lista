@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { ArrowLeft, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
 import { AppUser, ShoppingLine, ShoppingList } from '../types';
 import { generateId, getTodayDateString } from '../utils/storage';
 import { CalendarDatePicker } from './CalendarDatePicker';
@@ -43,13 +43,18 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
 }) => {
   const isEditing = Boolean(initialList);
 
+  // En "Nueva lista", no hay usuario seleccionado ni verificado al entrar: el resto de campos quedan deshabilitados hasta cubrir y verificar el usuario
   const [selectedUserId, setSelectedUserId] = useState<string>(
-    initialList?.usuarioId ?? (users.length === 1 ? users[0].id : '')
+    initialList?.usuarioId ?? ''
   );
+  const [isUserVerified, setIsUserVerified] = useState<boolean>(isEditing);
+
   const [nombre, setNombre] = useState(initialList?.nombre ?? '');
   const [fechaCompra, setFechaCompra] = useState(
     initialList?.fechaCompra ?? getTodayDateString()
   );
+
+  const listNameInputRef = useRef<HTMLInputElement>(null);
 
   // Al editar una lista existente, cargamos sus líneas guardadas y añadimos una línea en blanco al final para poder añadir más
   const [lineas, setLineas] = useState<ShoppingLine[]>(() => {
@@ -67,6 +72,7 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const handleUpdateLine = (id: string, changes: Partial<ShoppingLine>) => {
+    if (!isUserVerified) return;
     setLineas((prev) =>
       prev.map((l) => (l.id === id ? { ...l, ...changes } : l))
     );
@@ -76,6 +82,7 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
   };
 
   const handleSaveLine = (id: string) => {
+    if (!isUserVerified) return;
     const targetLine = lineas.find((l) => l.id === id);
     if (!targetLine || !targetLine.nombreProducto.trim()) return;
 
@@ -113,6 +120,7 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
   };
 
   const handleEditLine = (id: string) => {
+    if (!isUserVerified) return;
     setLineas((prev) =>
       prev.map((l) => (l.id === id ? { ...l, guardada: false } : l))
     );
@@ -120,6 +128,7 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
   };
 
   const handleDeleteLine = (id: string) => {
+    if (!isUserVerified) return;
     setLineas((prev) => {
       const filtered = prev.filter((l) => l.id !== id);
       if (filtered.length === 0) {
@@ -127,7 +136,6 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
         setFocusLineId(blank.id);
         return [blank];
       }
-      // Asegurar que siempre quede al menos una línea editable o en blanco al final para poder añadir más
       const hasBlankAtEnd =
         !filtered[filtered.length - 1].guardada &&
         filtered[filtered.length - 1].nombreProducto.trim() === '';
@@ -141,14 +149,16 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
 
   const handleFinalize = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isUserVerified) return;
+
     const errors: string[] = [];
 
     const selectedUser = users.find((u) => u.id === selectedUserId);
     const resolvedUserName =
       selectedUser?.nombre ?? initialList?.usuarioNombre ?? '';
 
-    if (!selectedUser && !resolvedUserName) {
-      errors.push('Selecciona un usuario o regístrate como nuevo usuario.');
+    if (!isUserVerified || (!selectedUser && !resolvedUserName)) {
+      errors.push('Selecciona un usuario e introduce su password o regístrate.');
     }
 
     const trimmedName = nombre.trim();
@@ -174,7 +184,6 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
       return;
     }
 
-    // Aseguramos que todos los productos con nombre se añadan al catálogo y queden marcados como guardados
     const finalLines: ShoppingLine[] = nonBlankLines.map((l) => {
       const cleanProduct = l.nombreProducto.trim();
       onAddCatalogProduct(cleanProduct);
@@ -229,20 +238,38 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
             <UserSelectorSection
               users={users}
               selectedUserId={selectedUserId}
+              isUserVerified={isUserVerified}
               hasError={validationErrors.some((err) => err.includes('usuario'))}
-              onSelectUser={(user) => {
+              onSelectVerifiedUser={(user) => {
                 setSelectedUserId(user.id);
+                setIsUserVerified(true);
                 if (validationErrors.length > 0) setValidationErrors([]);
+                setTimeout(() => {
+                  listNameInputRef.current?.focus();
+                }, 50);
               }}
               onCreateUser={(newUser) => {
                 onCreateUser(newUser);
                 setSelectedUserId(newUser.id);
+                setIsUserVerified(true);
                 if (validationErrors.length > 0) setValidationErrors([]);
+                setTimeout(() => {
+                  listNameInputRef.current?.focus();
+                }, 50);
               }}
             />
 
-            {/* 1. Campo de texto para el nombre de la lista */}
-            <div>
+            {!isUserVerified && (
+              <div className="rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 px-3.5 py-2.5 flex items-center gap-2.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+                <Lock className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <span>
+                  Elige un usuario (e introduce su password) o registra uno nuevo para habilitar el resto de los campos.
+                </span>
+              </div>
+            )}
+
+            {/* 1. Campo de texto para el nombre de la lista (deshabilitado hasta cubrir el usuario) */}
+            <div className={!isUserVerified ? 'opacity-50 select-none' : ''}>
               <label
                 htmlFor="list-name-input"
                 className="block text-sm font-semibold text-stone-800 dark:text-stone-200 mb-1.5"
@@ -250,8 +277,10 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
                 Nombre de la lista
               </label>
               <input
+                ref={listNameInputRef}
                 id="list-name-input"
                 type="text"
+                disabled={!isUserVerified}
                 value={nombre}
                 onChange={(e) => {
                   setNombre(e.target.value);
@@ -259,19 +288,22 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
                 }}
                 placeholder="Ej. Compra semanal Mercadona, Barbacoa domingo..."
                 className={`w-full min-h-[52px] px-4 py-3 rounded-2xl text-base font-medium border transition-colors ${
-                  validationErrors.some((err) => err.includes('nombre'))
+                  !isUserVerified
+                    ? 'border-stone-200 dark:border-stone-800 bg-stone-100/70 dark:bg-stone-900/40 cursor-not-allowed text-stone-400'
+                    : validationErrors.some((err) => err.includes('nombre'))
                     ? 'border-red-500 bg-red-50/40 dark:bg-red-950/20 text-stone-900 dark:text-stone-100'
                     : 'border-stone-300 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-950 text-stone-900 dark:text-stone-100 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20'
                 }`}
               />
             </div>
 
-            {/* 2. Selector de fecha con desplegable de calendario */}
-            <div>
+            {/* 2. Selector de fecha con desplegable de calendario (deshabilitado hasta cubrir el usuario) */}
+            <div className={!isUserVerified ? 'opacity-50 select-none' : ''}>
               <label className="block text-sm font-semibold text-stone-800 dark:text-stone-200 mb-1.5">
                 Fecha de la compra
               </label>
               <CalendarDatePicker
+                disabled={!isUserVerified}
                 value={fechaCompra}
                 onChange={(newDate) => {
                   setFechaCompra(newDate);
@@ -282,8 +314,13 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
             </div>
           </section>
 
-          {/* 3. Líneas de productos */}
-          <section className="space-y-3">
+          {/* 3. Líneas de productos (deshabilitadas hasta cubrir el usuario) */}
+          <fieldset
+            disabled={!isUserVerified}
+            className={`space-y-3 transition-opacity ${
+              !isUserVerified ? 'opacity-50 pointer-events-none select-none' : ''
+            }`}
+          >
             <div className="flex items-center justify-between px-1">
               <h2 className="text-base font-bold text-stone-900 dark:text-stone-100">
                 Productos de la lista
@@ -301,7 +338,7 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
                   line={line}
                   index={index}
                   catalog={catalog}
-                  autoFocusInput={focusLineId === line.id}
+                  autoFocusInput={isUserVerified && focusLineId === line.id}
                   canDelete={lineas.length > 1 || line.guardada}
                   onUpdateLine={handleUpdateLine}
                   onSaveLine={handleSaveLine}
@@ -310,7 +347,7 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
                 />
               ))}
             </div>
-          </section>
+          </fieldset>
 
           {/* Mensajes de validación claros */}
           {validationErrors.length > 0 && (
@@ -334,11 +371,16 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
             </div>
           )}
 
-          {/* 6. En la parte inferior, botón "Finalizar" */}
+          {/* 6. En la parte inferior, botón "Finalizar" (deshabilitado hasta cubrir el usuario) */}
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full min-h-[56px] px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-base flex items-center justify-center gap-2.5 shadow-md shadow-emerald-900/10 transition-all whitespace-nowrap"
+              disabled={!isUserVerified}
+              className={`w-full min-h-[56px] px-6 py-3.5 rounded-2xl font-bold text-base flex items-center justify-center gap-2.5 transition-all whitespace-nowrap ${
+                !isUserVerified
+                  ? 'bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed'
+                  : 'bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white shadow-md shadow-emerald-900/10'
+              }`}
             >
               <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
               <span>Finalizar</span>

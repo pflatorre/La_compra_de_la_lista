@@ -6,6 +6,7 @@ interface CalendarDatePickerProps {
   value: string; // YYYY-MM-DD
   onChange: (newDate: string) => void;
   hasError?: boolean;
+  disabled?: boolean;
 }
 
 const MONTH_NAMES = [
@@ -29,6 +30,7 @@ export const CalendarDatePicker: React.FC<CalendarDatePickerProps> = ({
   value,
   onChange,
   hasError,
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -129,11 +131,16 @@ export const CalendarDatePicker: React.FC<CalendarDatePickerProps> = ({
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
+          disabled={disabled}
+          onClick={() => {
+            if (!disabled) setIsOpen((prev) => !prev);
+          }}
           aria-expanded={isOpen}
           aria-label="Abrir desplegable de calendario para elegir fecha de la compra"
           className={`w-full min-h-[52px] px-4 py-3 rounded-2xl border text-left flex items-center justify-between transition-colors ${
-            hasError
+            disabled
+              ? 'border-stone-200 dark:border-stone-800 bg-stone-100/70 dark:bg-stone-900/40 cursor-not-allowed opacity-60'
+              : hasError
               ? 'border-red-500 bg-red-50/40 dark:bg-red-950/20'
               : isOpen
               ? 'border-emerald-600 ring-2 ring-emerald-600/20 bg-white dark:bg-stone-900'
@@ -162,6 +169,7 @@ export const CalendarDatePicker: React.FC<CalendarDatePickerProps> = ({
         {/* Input nativo sincronizado para accesibilidad y soporte directo */}
         <input
           type="date"
+          disabled={disabled}
           aria-label="Fecha de la compra"
           value={value}
           onChange={(e) => onChange(e.target.value)}
