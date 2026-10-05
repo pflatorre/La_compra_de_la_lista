@@ -76,7 +76,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
                     <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-stone-100 dark:border-stone-800">
                       <div className="min-w-0 flex-1">
                         <h2 className="text-lg sm:text-xl font-bold text-stone-900 dark:text-stone-100 truncate">
-                          {list.nombre}
+                          {list.usuarioNombre ? `${list.usuarioNombre} · ${list.nombre}` : list.nombre}
                         </h2>
                         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-stone-500 dark:text-stone-400">
                           <span>

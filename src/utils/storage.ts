@@ -1,7 +1,8 @@
-import { ShoppingList } from '../types';
+import { AppUser, ShoppingList } from '../types';
 
 const LISTS_STORAGE_KEY = 'la_compra_de_la_lista_listas_v1';
 const CATALOG_STORAGE_KEY = 'la_compra_de_la_lista_catalogo_v1';
+const USERS_STORAGE_KEY = 'la_compra_de_la_lista_usuarios_v1';
 const THEME_STORAGE_KEY = 'la_compra_de_la_lista_tema_v1';
 
 /**
@@ -90,6 +91,25 @@ export function saveCatalog(catalog: string[]): void {
     localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(catalog));
   } catch (err) {
     console.error('Error guardando catálogo en localStorage:', err);
+  }
+}
+
+export function loadUsers(): AppUser[] {
+  try {
+    const raw = localStorage.getItem(USERS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveUsers(users: AppUser[]): void {
+  try {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+  } catch (err) {
+    console.error('Error guardando usuarios en localStorage:', err);
   }
 }
 

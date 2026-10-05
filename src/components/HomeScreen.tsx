@@ -1,11 +1,12 @@
 import React from 'react';
-import { Plus, History, Sun, Moon, ShoppingBasket } from 'lucide-react';
-import { ShoppingList } from '../types';
+import { Plus, History, Sun, Moon, ShoppingBasket, ShoppingCart } from 'lucide-react';
+import { AppUser, ShoppingList } from '../types';
 import { ThemeMode } from '../utils/storage';
 import { ListCard } from './ListCard';
 
 interface HomeScreenProps {
   lists: ShoppingList[];
+  users: AppUser[];
   theme: ThemeMode;
   onToggleTheme: () => void;
   onNewList: () => void;
@@ -17,6 +18,7 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   lists,
+  users,
   theme,
   onToggleTheme,
   onNewList,
@@ -35,17 +37,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   return (
     <div className="min-h-screen flex flex-col">
       <div className="w-full max-w-2xl mx-auto px-4 pt-6 pb-16 flex-1 flex flex-col">
-        {/* 1. Título de la aplicación */}
-        <header className="mb-5">
-          <h1
-            className="text-3xl sm:text-4xl font-bold tracking-tight text-stone-900 dark:text-stone-50"
-            style={{ fontFamily: 'var(--font-display)', textWrap: 'balance' }}
+        {/* 1. Título de la aplicación con logotipo de carro de la compra */}
+        <header className="mb-5 flex items-center gap-3.5">
+          <div
+            aria-hidden="true"
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white flex items-center justify-center shadow-sm shadow-emerald-900/15 shrink-0"
           >
-            La Compra de la Lista
-          </h1>
-          <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-            Organiza tu cesta y marca tus productos en el supermercado
-          </p>
+            <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.25]" />
+          </div>
+          <div className="min-w-0">
+            <h1
+              className="text-3xl sm:text-4xl font-bold tracking-tight text-stone-900 dark:text-stone-50"
+              style={{ fontFamily: 'var(--font-display)', textWrap: 'balance' }}
+            >
+              La Compra de la Lista
+            </h1>
+            <p className="mt-0.5 text-sm text-stone-600 dark:text-stone-400">
+              Organiza tu cesta y marca tus productos en el supermercado
+            </p>
+          </div>
         </header>
 
         {/* 2. Barra de botones entre el título y las listas */}
@@ -112,6 +122,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <ListCard
                   key={list.id}
                   list={list}
+                  users={users}
                   onStartShopping={onStartShopping}
                   onEditList={onEditList}
                   onDeleteList={onDeleteList}

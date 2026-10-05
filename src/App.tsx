@@ -1,19 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ScreenView, ShoppingLine, ShoppingList } from './types';
+import { AppUser, ScreenView, ShoppingLine, ShoppingList } from './types';
 import {
   addProductToCatalog,
   generateId,
   getInitialTheme,
   loadCatalog,
   loadLists,
+  loadUsers,
   saveCatalog,
   saveLists,
   saveThemePreference,
+  saveUsers,
   ThemeMode,
 } from './utils/storage';
 import {
   isSupabaseConfigured,
   fetchAllDataFromSupabase,
+  createUserInSupabase,
   insertCatalogProductInSupabase,
   createShoppingListInSupabase,
   updateShoppingListInSupabase,
@@ -29,30 +32,45 @@ import { HistoryScreen } from './components/HistoryScreen';
 export default function App() {
   const [lists, setLists] = useState<ShoppingList[]>(() => loadLists());
   const [catalog, setCatalog] = useState<string[]>(() => loadCatalog());
+  const [users, setUsers] = useState<AppUser[]>(() => loadUsers());
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
   const [view, setView] = useState<ScreenView>({ type: 'home' });
 
-  // Si Supabase está configurado, cargamos las listas y el catálogo desde la base de datos al iniciar
+  // Si Supabase está configurado, cargamos las listas, el catálogo y los usuarios al iniciar
   useEffect(() => {
     if (!isSupabaseConfigured) return;
 
     fetchAllDataFromSupabase()
-      .then(({ lists: remoteLists, catalog: remoteCatalog }) => {
-        setLists(remoteLists);
-        setCatalog((prev) => {
-          let merged = [...prev];
-          for (const item of remoteCatalog) {
-            merged = addProductToCatalog(merged, item);
+      .then(
+        ({
+          lists: remoteLists,
+          catalog: remoteCatalog,
+          users: remoteUsers,
+        }) => {
+          setLists(remoteLists);
+          setCatalog((prev) => {
+            let merged = [...prev];
+            for (const item of remoteCatalog) {
+              merged = addProductToCatalog(merged, item);
+            }
+            return merged;
+          });
+          if (remoteUsers.length > 0) {
+            setUsers((prev) => {
+              const map = new Map<string, AppUser>();
+              for (const u of prev) map.set(u.id, u);
+              for (const u of remoteUsers) map.set(u.id, u);
+              return Array.from(map.values());
+            });
           }
-          return merged;
-        });
-      })
+        }
+      )
       .catch((err) => {
         console.error('Error al cargar datos desde Supabase:', err);
       });
   }, []);
 
-  // Persistir listas en localStorage como copia local inmediata
+  // Persistir listas en localStorage
   useEffect(() => {
     saveLists(lists);
   }, [lists]);
@@ -61,6 +79,11 @@ export default function App() {
   useEffect(() => {
     saveCatalog(catalog);
   }, [catalog]);
+
+  // Persistir usuarios en localStorage
+  useEffect(() => {
+    saveUsers(users);
+  }, [users]);
 
   // Aplicar clase dark en <html>
   useEffect(() => {
@@ -80,6 +103,15 @@ export default function App() {
     });
   }, []);
 
+  const handleCreateUser = useCallback((newUser: AppUser) => {
+    setUsers((prev) => [...prev, newUser]);
+    if (isSupabaseConfigured) {
+      createUserInSupabase(newUser).catch((err) =>
+        console.error('Error creando usuario en Supabase:', err)
+      );
+    }
+  }, []);
+
   const handleAddCatalogProduct = useCallback((productName: string) => {
     setCatalog((prev) => addProductToCatalog(prev, productName));
     if (isSupabaseConfigured) {
@@ -90,13 +122,21 @@ export default function App() {
   }, []);
 
   const handleCreateList = useCallback(
-    (data: { nombre: string; fechaCompra: string; lineas: ShoppingLine[] }) => {
+    (data: {
+      nombre: string;
+      fechaCompra: string;
+      lineas: ShoppingLine[];
+      usuarioId: string;
+      usuarioNombre: string;
+    }) => {
       const newList: ShoppingList = {
         id: generateId(),
         nombre: data.nombre,
         fechaCompra: data.fechaCompra,
         estado: 'pendiente',
         lineas: data.lineas,
+        usuarioId: data.usuarioId,
+        usuarioNombre: data.usuarioNombre,
       };
       setLists((prev) => [...prev, newList]);
       setView({ type: 'home' });
@@ -113,7 +153,13 @@ export default function App() {
   const handleUpdateList = useCallback(
     (
       listId: string,
-      data: { nombre: string; fechaCompra: string; lineas: ShoppingLine[] }
+      data: {
+        nombre: string;
+        fechaCompra: string;
+        lineas: ShoppingLine[];
+        usuarioId: string;
+        usuarioNombre: string;
+      }
     ) => {
       setLists((prev) =>
         prev.map((item) =>
@@ -123,6 +169,8 @@ export default function App() {
                 nombre: data.nombre,
                 fechaCompra: data.fechaCompra,
                 lineas: data.lineas,
+                usuarioId: data.usuarioId,
+                usuarioNombre: data.usuarioNombre,
               }
             : item
         )
@@ -242,7 +290,9 @@ export default function App() {
   if (view.type === 'create') {
     return (
       <ListEditorScreen
+        users={users}
         catalog={catalog}
+        onCreateUser={handleCreateUser}
         onAddCatalogProduct={handleAddCatalogProduct}
         onSaveList={handleCreateList}
         onBack={() => setView({ type: 'home' })}
@@ -256,6 +306,7 @@ export default function App() {
       return (
         <HomeScreen
           lists={lists}
+          users={users}
           theme={theme}
           onToggleTheme={handleToggleTheme}
           onNewList={() => setView({ type: 'create' })}
@@ -270,7 +321,9 @@ export default function App() {
     return (
       <ListEditorScreen
         initialList={targetList}
+        users={users}
         catalog={catalog}
+        onCreateUser={handleCreateUser}
         onAddCatalogProduct={handleAddCatalogProduct}
         onSaveList={(data) => handleUpdateList(targetList.id, data)}
         onBack={() => setView({ type: 'home' })}
@@ -284,6 +337,7 @@ export default function App() {
       return (
         <HomeScreen
           lists={lists}
+          users={users}
           theme={theme}
           onToggleTheme={handleToggleTheme}
           onNewList={() => setView({ type: 'create' })}
@@ -318,6 +372,7 @@ export default function App() {
   return (
     <HomeScreen
       lists={lists}
+      users={users}
       theme={theme}
       onToggleTheme={handleToggleTheme}
       onNewList={() => setView({ type: 'create' })}

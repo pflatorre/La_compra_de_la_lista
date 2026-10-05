@@ -1,10 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShoppingBag, Pencil, Trash2, Play, AlertTriangle, X } from 'lucide-react';
-import { ShoppingList } from '../types';
+import {
+  Pencil,
+  Trash2,
+  Play,
+  AlertTriangle,
+  X,
+  User,
+  Lock,
+} from 'lucide-react';
+import { AppUser, ShoppingList } from '../types';
 import { formatSpanishDate } from '../utils/storage';
+import { NumericKeypadModal } from './NumericKeypadModal';
 
 interface ListCardProps {
   list: ShoppingList;
+  users: AppUser[];
   onStartShopping: (listId: string) => void;
   onEditList: (listId: string) => void;
   onDeleteList: (listId: string) => void;
@@ -12,16 +22,29 @@ interface ListCardProps {
 
 export const ListCard: React.FC<ListCardProps> = ({
   list,
+  users,
   onStartShopping,
   onEditList,
   onDeleteList,
 }) => {
   const [menuStep, setMenuStep] = useState<'closed' | 'actions' | 'confirmDelete'>('closed');
+  const [showPinVerify, setShowPinVerify] = useState(false);
   const cardWrapperRef = useRef<HTMLDivElement>(null);
 
   const totalProducts = list.lineas.length;
   const checkedProducts = list.lineas.filter((l) => l.marcado).length;
   const isEnCurso = list.estado === 'en curso';
+
+  // Buscar el usuario que creó la lista (por id o por nombre)
+  const creatorUser =
+    users.find((u) => u.id === list.usuarioId) ??
+    users.find(
+      (u) =>
+        list.usuarioNombre &&
+        u.nombre.toLowerCase() === list.usuarioNombre.toLowerCase()
+    );
+
+  const displayUserName = creatorUser?.nombre || list.usuarioNombre;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -42,7 +65,17 @@ export const ListCard: React.FC<ListCardProps> = ({
   }, [menuStep]);
 
   const handleCardClick = () => {
-    setMenuStep((prev) => (prev === 'closed' ? 'actions' : 'closed'));
+    if (menuStep !== 'closed') {
+      setMenuStep('closed');
+      return;
+    }
+
+    // Si la lista tiene usuario creador con password, pedimos primero el password de 4 dígitos
+    if (creatorUser && creatorUser.password) {
+      setShowPinVerify(true);
+    } else {
+      setMenuStep('actions');
+    }
   };
 
   return (
@@ -62,8 +95,29 @@ export const ListCard: React.FC<ListCardProps> = ({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg sm:text-xl font-bold text-stone-900 dark:text-stone-100 truncate">
-              {list.nombre}
+            {/* Nombre del usuario antes del nombre de la lista de la compra */}
+            <h2 className="text-lg sm:text-xl font-bold text-stone-900 dark:text-stone-100 truncate flex items-center gap-2">
+              {displayUserName && (
+                <>
+                  <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 shrink-0">
+                    <User className="w-4 h-4 shrink-0" />
+                    <span>{displayUserName}</span>
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="text-stone-300 dark:text-stone-600 font-normal"
+                  >
+                    ·
+                  </span>
+                </>
+              )}
+              <span className="truncate">{list.nombre}</span>
+              {creatorUser?.password && (
+                <Lock
+                  aria-label="Protegida con password"
+                  className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500 shrink-0 ml-0.5"
+                />
+              )}
             </h2>
 
             {/* Metadatos limpios con separadores tipográficos */}
@@ -107,6 +161,20 @@ export const ListCard: React.FC<ListCardProps> = ({
         </div>
       </button>
 
+      {/* Teclado numérico para verificar el password del usuario que creó la lista */}
+      {showPinVerify && creatorUser && (
+        <NumericKeypadModal
+          mode="verify"
+          userName={creatorUser.nombre}
+          expectedPin={creatorUser.password}
+          onSuccess={() => {
+            setShowPinVerify(false);
+            setMenuStep('actions');
+          }}
+          onCancel={() => setShowPinVerify(false)}
+        />
+      )}
+
       {/* Primer Bocadillo (Popover de acciones junto a la tarjeta) */}
       {menuStep === 'actions' && (
         <div
@@ -122,7 +190,8 @@ export const ListCard: React.FC<ListCardProps> = ({
 
           <div className="flex items-center justify-between px-2.5 py-1.5 mb-1 border-b border-stone-100 dark:border-stone-800">
             <span className="text-xs font-semibold text-stone-500 dark:text-stone-400 truncate">
-              Opciones · {list.nombre}
+              Opciones · {displayUserName ? `${displayUserName} · ` : ''}
+              {list.nombre}
             </span>
             <button
               type="button"

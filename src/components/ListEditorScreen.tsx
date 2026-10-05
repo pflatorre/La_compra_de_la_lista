@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
-import { ShoppingLine, ShoppingList } from '../types';
+import { AppUser, ShoppingLine, ShoppingList } from '../types';
 import { generateId, getTodayDateString } from '../utils/storage';
 import { CalendarDatePicker } from './CalendarDatePicker';
 import { ProductLineItem } from './ProductLineItem';
+import { UserSelectorSection } from './UserSelectorSection';
 
 interface ListEditorScreenProps {
   initialList?: ShoppingList;
+  users: AppUser[];
   catalog: string[];
+  onCreateUser: (newUser: AppUser) => void;
   onAddCatalogProduct: (productName: string) => void;
   onSaveList: (data: {
     nombre: string;
     fechaCompra: string;
     lineas: ShoppingLine[];
+    usuarioId: string;
+    usuarioNombre: string;
   }) => void;
   onBack: () => void;
 }
@@ -29,13 +34,18 @@ function createBlankLine(): ShoppingLine {
 
 export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
   initialList,
+  users,
   catalog,
+  onCreateUser,
   onAddCatalogProduct,
   onSaveList,
   onBack,
 }) => {
   const isEditing = Boolean(initialList);
 
+  const [selectedUserId, setSelectedUserId] = useState<string>(
+    initialList?.usuarioId ?? (users.length === 1 ? users[0].id : '')
+  );
   const [nombre, setNombre] = useState(initialList?.nombre ?? '');
   const [fechaCompra, setFechaCompra] = useState(
     initialList?.fechaCompra ?? getTodayDateString()
@@ -133,6 +143,14 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
     e.preventDefault();
     const errors: string[] = [];
 
+    const selectedUser = users.find((u) => u.id === selectedUserId);
+    const resolvedUserName =
+      selectedUser?.nombre ?? initialList?.usuarioNombre ?? '';
+
+    if (!selectedUser && !resolvedUserName) {
+      errors.push('Selecciona un usuario o regístrate como nuevo usuario.');
+    }
+
     const trimmedName = nombre.trim();
     if (!trimmedName) {
       errors.push('Indica un nombre para la lista de la compra.');
@@ -172,6 +190,8 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
       nombre: trimmedName,
       fechaCompra: fechaCompra.trim(),
       lineas: finalLines,
+      usuarioId: selectedUser?.id ?? initialList?.usuarioId ?? '',
+      usuarioNombre: resolvedUserName,
     });
   };
 
@@ -205,6 +225,22 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
         <form onSubmit={handleFinalize} noValidate className="space-y-6 flex-1">
           {/* Datos principales de la lista */}
           <section className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 p-4 sm:p-5 shadow-xs space-y-4">
+            {/* 0. Selector de usuario y registro con password numérico de 4 dígitos */}
+            <UserSelectorSection
+              users={users}
+              selectedUserId={selectedUserId}
+              hasError={validationErrors.some((err) => err.includes('usuario'))}
+              onSelectUser={(user) => {
+                setSelectedUserId(user.id);
+                if (validationErrors.length > 0) setValidationErrors([]);
+              }}
+              onCreateUser={(newUser) => {
+                onCreateUser(newUser);
+                setSelectedUserId(newUser.id);
+                if (validationErrors.length > 0) setValidationErrors([]);
+              }}
+            />
+
             {/* 1. Campo de texto para el nombre de la lista */}
             <div>
               <label

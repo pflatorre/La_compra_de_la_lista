@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { ShoppingLine, ShoppingList, ShoppingListStatus } from '../types';
+import { AppUser, ShoppingLine, ShoppingList, ShoppingListStatus } from '../types';
 
 /**
  * Limpia y normaliza la URL de Supabase para evitar el error PGRST125 ("Invalid path specified in request URL")
@@ -22,14 +22,12 @@ function sanitizeSupabaseUrl(raw?: string): string {
     if (cleaned.includes('.supabase.co')) {
       cleaned = `https://${cleaned}`;
     } else if (/^[a-z0-9]{15,25}$/i.test(cleaned)) {
-      // Si pegó únicamente el Project ID / Reference ID
       cleaned = `https://${cleaned}.supabase.co`;
     }
   }
 
   try {
     const parsed = new URL(cleaned);
-    // Devolver únicamente el origin (ej. https://xyzcompany.supabase.co) sin "/rest/v1" ni barras finales
     return parsed.origin;
   } catch {
     return '';
@@ -77,17 +75,26 @@ interface DbListaRow {
   fecha_compra: string;
   estado: ShoppingListStatus;
   fecha_finalizacion: string | null;
+  usuario_id?: string | null;
+  usuario_nombre?: string | null;
+}
+
+interface DbUsuarioRow {
+  id: string;
+  nombre: string;
+  password: string;
 }
 
 export async function fetchAllDataFromSupabase(): Promise<{
   lists: ShoppingList[];
   catalog: string[];
+  users: AppUser[];
 }> {
   if (!supabase) {
-    return { lists: [], catalog: [] };
+    return { lists: [], catalog: [], users: [] };
   }
 
-  const [listsRes, linesRes, catalogRes] = await Promise.all([
+  const [listsRes, linesRes, catalogRes, usersRes] = await Promise.all([
     supabase
       .from('listas_compra')
       .select('*')
@@ -100,6 +107,10 @@ export async function fetchAllDataFromSupabase(): Promise<{
       .from('catalogo_productos')
       .select('nombre')
       .order('nombre', { ascending: true }),
+    supabase
+      .from('usuarios')
+      .select('*')
+      .order('nombre', { ascending: true }),
   ]);
 
   if (listsRes.error) {
@@ -110,6 +121,20 @@ export async function fetchAllDataFromSupabase(): Promise<{
   }
   if (catalogRes.error) {
     throw catalogRes.error;
+  }
+
+  // Si la tabla usuarios aún no ha sido creada en Supabase, no lanzamos error para no romper la carga
+  const users: AppUser[] = !usersRes.error
+    ? ((usersRes.data ?? []) as DbUsuarioRow[]).map((u) => ({
+        id: u.id,
+        nombre: u.nombre,
+        password: u.password,
+      }))
+    : [];
+
+  const usersById = new Map<string, AppUser>();
+  for (const u of users) {
+    usersById.set(u.id, u);
   }
 
   const allLines = (linesRes.data ?? []) as DbLineaRow[];
@@ -129,23 +154,42 @@ export async function fetchAllDataFromSupabase(): Promise<{
   }
 
   const lists: ShoppingList[] = ((listsRes.data ?? []) as DbListaRow[]).map(
-    (row) => ({
-      id: row.id,
-      nombre: row.nombre,
-      fechaCompra: row.fecha_compra,
-      estado: row.estado,
-      lineas: linesByListId.get(row.id) ?? [],
-      ...(row.fecha_finalizacion
-        ? { fechaFinalizacion: row.fecha_finalizacion }
-        : {}),
-    })
+    (row) => {
+      const matchedUser = row.usuario_id
+        ? usersById.get(row.usuario_id)
+        : undefined;
+      return {
+        id: row.id,
+        nombre: row.nombre,
+        fechaCompra: row.fecha_compra,
+        estado: row.estado,
+        lineas: linesByListId.get(row.id) ?? [],
+        ...(row.fecha_finalizacion
+          ? { fechaFinalizacion: row.fecha_finalizacion }
+          : {}),
+        ...(row.usuario_id ? { usuarioId: row.usuario_id } : {}),
+        ...(row.usuario_nombre || matchedUser?.nombre
+          ? { usuarioNombre: row.usuario_nombre || matchedUser?.nombre }
+          : {}),
+      };
+    }
   );
 
   const catalog = ((catalogRes.data ?? []) as { nombre: string }[]).map(
     (c) => c.nombre
   );
 
-  return { lists, catalog };
+  return { lists, catalog, users };
+}
+
+export async function createUserInSupabase(user: AppUser): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.from('usuarios').insert({
+    id: user.id,
+    nombre: user.nombre,
+    password: user.password,
+  });
+  if (error) throw error;
 }
 
 export async function insertCatalogProductInSupabase(
@@ -156,7 +200,6 @@ export async function insertCatalogProductInSupabase(
     .from('catalogo_productos')
     .insert({ nombre: nombre.trim() });
 
-  // Ignoramos el código 23505 (unique_violation) porque significa que el producto ya existe en el catálogo
   if (error && error.code !== '23505') {
     throw error;
   }
@@ -173,9 +216,21 @@ export async function createShoppingListInSupabase(
     fecha_compra: list.fechaCompra,
     estado: list.estado,
     fecha_finalizacion: list.fechaFinalizacion ?? null,
+    usuario_id: list.usuarioId || null,
+    usuario_nombre: list.usuarioNombre || null,
   });
 
-  if (listErr) throw listErr;
+  // Si el usuario aún no ejecutó el ALTER TABLE para añadir usuario_id / usuario_nombre, reintentar sin esas columnas
+  if (listErr) {
+    const { error: fallbackErr } = await supabase.from('listas_compra').insert({
+      id: list.id,
+      nombre: list.nombre,
+      fecha_compra: list.fechaCompra,
+      estado: list.estado,
+      fecha_finalizacion: list.fechaFinalizacion ?? null,
+    });
+    if (fallbackErr) throw fallbackErr;
+  }
 
   if (list.lineas.length > 0) {
     const linesToInsert = list.lineas.map((line, idx) => ({
@@ -198,7 +253,13 @@ export async function createShoppingListInSupabase(
 
 export async function updateShoppingListInSupabase(
   listId: string,
-  data: { nombre: string; fechaCompra: string; lineas: ShoppingLine[] }
+  data: {
+    nombre: string;
+    fechaCompra: string;
+    lineas: ShoppingLine[];
+    usuarioId?: string;
+    usuarioNombre?: string;
+  }
 ): Promise<void> {
   if (!supabase) return;
 
@@ -207,12 +268,22 @@ export async function updateShoppingListInSupabase(
     .update({
       nombre: data.nombre,
       fecha_compra: data.fechaCompra,
+      usuario_id: data.usuarioId || null,
+      usuario_nombre: data.usuarioNombre || null,
     })
     .eq('id', listId);
 
-  if (updateErr) throw updateErr;
+  if (updateErr) {
+    const { error: fallbackErr } = await supabase
+      .from('listas_compra')
+      .update({
+        nombre: data.nombre,
+        fecha_compra: data.fechaCompra,
+      })
+      .eq('id', listId);
+    if (fallbackErr) throw fallbackErr;
+  }
 
-  // Reemplazar las líneas de la lista manteniendo sus IDs y estado
   const { error: delErr } = await supabase
     .from('lineas_compra')
     .delete()
