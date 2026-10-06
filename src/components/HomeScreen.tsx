@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, History, Settings, ShoppingBasket, ShoppingCart } from 'lucide-react';
 import { AppUser, ShoppingList } from '../types';
+import { getTodayDateString } from '../utils/storage';
 import { ListCard } from './ListCard';
 
 interface HomeScreenProps {
@@ -26,12 +27,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onDeleteList,
   onUpdateUserPassword,
 }) => {
-  // Listas NO realizadas (pendientes y en curso), ordenadas por fecha de compra de la más próxima a la más lejana
+  const today = getTodayDateString();
+
+  // Listas vigentes (no realizadas y con fecha igual o posterior a hoy),
+  // ordenadas poniendo arriba las más cercanas a la fecha actual (las compras que deben efectuarse más pronto)
   const activeLists = lists
-    .filter((list) => list.estado !== 'realizada')
+    .filter((list) => list.estado !== 'realizada' && list.fechaCompra >= today)
     .sort((a, b) => a.fechaCompra.localeCompare(b.fechaCompra));
 
-  const completedCount = lists.filter((list) => list.estado === 'realizada').length;
+  const completedCount = lists.filter(
+    (list) => list.estado === 'realizada' || list.fechaCompra < today
+  ).length;
 
   return (
     <div className="min-h-screen flex flex-col">

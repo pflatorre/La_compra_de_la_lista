@@ -11,6 +11,7 @@ import { ShoppingList } from '../types';
 import {
   formatSpanishDate,
   formatCompletedTimestamp,
+  getTodayDateString,
 } from '../utils/storage';
 
 interface HistoryScreenProps {
@@ -25,14 +26,20 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
   onBack,
 }) => {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const today = getTodayDateString();
 
-  // Listas realizadas, ordenadas de la más reciente a la más antigua
+  // Listas realizadas o cuya fecha de compra ya ha pasado, ordenadas de la más reciente a la más antigua
   const completedLists = lists
-    .filter((l) => l.estado === 'realizada')
+    .filter((l) => l.estado === 'realizada' || l.fechaCompra < today)
     .sort((a, b) => {
-      const dateA = a.fechaFinalizacion || a.fechaCompra;
-      const dateB = b.fechaFinalizacion || b.fechaCompra;
-      return dateB.localeCompare(dateA);
+      const dateA = a.fechaCompra;
+      const dateB = b.fechaCompra;
+      if (dateB !== dateA) {
+        return dateB.localeCompare(dateA);
+      }
+      return (b.fechaFinalizacion || '').localeCompare(
+        a.fechaFinalizacion || ''
+      );
     });
 
   return (
@@ -82,7 +89,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
                           <span>
                             Compra: {formatSpanishDate(list.fechaCompra)}
                           </span>
-                          {list.fechaFinalizacion && (
+                          {list.fechaFinalizacion ? (
                             <>
                               <span aria-hidden="true">·</span>
                               <span>
@@ -90,6 +97,13 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
                                 {formatCompletedTimestamp(
                                   list.fechaFinalizacion
                                 )}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span aria-hidden="true">·</span>
+                              <span className="text-amber-700 dark:text-amber-400 font-medium">
+                                Fecha pasada
                               </span>
                             </>
                           )}

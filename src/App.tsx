@@ -4,6 +4,7 @@ import {
   addProductToCatalog,
   generateId,
   getInitialTheme,
+  getTodayDateString,
   loadCatalog,
   loadLists,
   loadUsers,
@@ -74,6 +75,40 @@ export default function App() {
         console.error('Error al cargar datos desde Supabase:', err);
       });
   }, []);
+
+  // Si una lista de la compra se pasa de la fecha actual, pasarla automáticamente al histórico
+  useEffect(() => {
+    const archiveExpiredLists = () => {
+      const today = getTodayDateString();
+      setLists((prev) => {
+        const expired = prev.filter(
+          (l) => l.estado !== 'realizada' && l.fechaCompra < today
+        );
+        if (expired.length === 0) return prev;
+
+        if (isSupabaseConfigured) {
+          for (const expList of expired) {
+            updateListStatusInSupabase(expList.id, 'realizada').catch((err) =>
+              console.error(
+                'Error pasando lista vencida al histórico en Supabase:',
+                err
+              )
+            );
+          }
+        }
+
+        return prev.map((l) =>
+          l.estado !== 'realizada' && l.fechaCompra < today
+            ? { ...l, estado: 'realizada' }
+            : l
+        );
+      });
+    };
+
+    archiveExpiredLists();
+    const interval = setInterval(archiveExpiredLists, 60_000);
+    return () => clearInterval(interval);
+  }, [lists.length]);
 
   // Persistir listas en localStorage
   useEffect(() => {
