@@ -502,7 +502,10 @@ export default function App() {
     return (
       <HistoryScreen
         lists={lists}
+        users={users}
         onDeleteList={handleDeleteList}
+        onUpdateUserPassword={handleUpdateUserPassword}
+        onGoHome={() => setView({ type: 'home' })}
         onBack={() => setView({ type: 'home' })}
       />
     );

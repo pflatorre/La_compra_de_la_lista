@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, User, Mail, Lock, Users, ChevronRight } from 'lucide-react';
+import { ArrowLeft, User, Lock, Users, ChevronRight } from 'lucide-react';
 import { AppUser } from '../types';
 import { NumericKeypadModal } from './NumericKeypadModal';
 
@@ -67,12 +67,6 @@ export const UsersManagementScreen: React.FC<UsersManagementScreenProps> = ({
                           {user.nombre}
                         </span>
                         <Lock className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-0.5 truncate">
-                        <Mail className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">
-                          {user.email ? user.email : 'Sin correo electrónico'}
-                        </span>
                       </div>
                     </div>
                   </div>
