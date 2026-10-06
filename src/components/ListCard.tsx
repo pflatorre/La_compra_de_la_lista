@@ -7,9 +7,11 @@ import {
   X,
   User,
   Lock,
+  FileDown,
 } from 'lucide-react';
 import { AppUser, ShoppingList } from '../types';
 import { formatSpanishDate } from '../utils/storage';
+import { exportShoppingListToPdf } from '../utils/pdfExport';
 import { NumericKeypadModal } from './NumericKeypadModal';
 
 interface ListCardProps {
@@ -231,6 +233,18 @@ export const ListCard: React.FC<ListCardProps> = ({
             >
               <Pencil className="w-4 h-4 shrink-0 text-stone-600 dark:text-stone-300" />
               <span>Editar lista</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMenuStep('closed');
+                exportShoppingListToPdf(list, displayUserName);
+              }}
+              className="w-full min-h-[48px] px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200/80 dark:bg-stone-800 dark:hover:bg-stone-700 active:scale-[0.99] text-stone-800 dark:text-stone-100 font-semibold text-sm flex items-center gap-3 transition-all whitespace-nowrap"
+            >
+              <FileDown className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span>Exportar a PDF</span>
             </button>
 
             <button
