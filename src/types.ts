@@ -28,7 +28,7 @@ export interface ShoppingList {
 
 export type ScreenView =
   | { type: 'home' }
-  | { type: 'create' }
+  | { type: 'create'; templateList?: ShoppingList }
   | { type: 'edit'; listId: string }
   | { type: 'shopping'; listId: string }
   | { type: 'history' }

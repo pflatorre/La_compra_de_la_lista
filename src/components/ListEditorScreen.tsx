@@ -8,6 +8,7 @@ import { UserSelectorSection } from './UserSelectorSection';
 
 interface ListEditorScreenProps {
   initialList?: ShoppingList;
+  templateList?: ShoppingList;
   users: AppUser[];
   catalog: string[];
   onCreateUser: (newUser: AppUser) => void;
@@ -35,6 +36,7 @@ function createBlankLine(): ShoppingLine {
 
 export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
   initialList,
+  templateList,
   users,
   catalog,
   onCreateUser,
@@ -44,21 +46,26 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
   onBack,
 }) => {
   const isEditing = Boolean(initialList);
+  const isReusing = Boolean(templateList);
+  const sourceList = initialList ?? templateList;
 
-  // En "Nueva lista", no hay usuario seleccionado ni verificado al entrar: el resto de campos quedan deshabilitados hasta cubrir y verificar el usuario
+  // En "Nueva lista" normal, no hay usuario seleccionado ni verificado al entrar.
+  // Si estamos editando o reutilizando una lista del histórico (ya verificada con password), el usuario ya viene cubierto y verificado.
   const [selectedUserId, setSelectedUserId] = useState<string>(
-    initialList?.usuarioId ?? ''
+    sourceList?.usuarioId ?? ''
   );
-  const [isUserVerified, setIsUserVerified] = useState<boolean>(isEditing);
+  const [isUserVerified, setIsUserVerified] = useState<boolean>(
+    isEditing || isReusing
+  );
 
-  const [nombre, setNombre] = useState(initialList?.nombre ?? '');
+  const [nombre, setNombre] = useState(sourceList?.nombre ?? '');
   const [fechaCompra, setFechaCompra] = useState(
     initialList?.fechaCompra ?? getTodayDateString()
   );
 
   const listNameInputRef = useRef<HTMLInputElement>(null);
 
-  // Al editar una lista existente, cargamos sus líneas guardadas y añadimos una línea en blanco al final para poder añadir más
+  // Al editar o reutilizar una lista existente, cargamos sus líneas guardadas y añadimos una línea en blanco al final para poder añadir más
   const [lineas, setLineas] = useState<ShoppingLine[]>(() => {
     if (initialList && initialList.lineas.length > 0) {
       const savedLines = initialList.lineas.map((l) => ({
@@ -66,6 +73,16 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
         guardada: true,
       }));
       return [...savedLines, createBlankLine()];
+    }
+    if (templateList && templateList.lineas.length > 0) {
+      const clonedLines = templateList.lineas.map((l) => ({
+        id: generateId(),
+        nombreProducto: l.nombreProducto,
+        cantidad: l.cantidad,
+        marcado: false,
+        guardada: true,
+      }));
+      return [...clonedLines, createBlankLine()];
     }
     return [createBlankLine()];
   });
@@ -157,7 +174,7 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
 
     const selectedUser = users.find((u) => u.id === selectedUserId);
     const resolvedUserName =
-      selectedUser?.nombre ?? initialList?.usuarioNombre ?? '';
+      selectedUser?.nombre ?? sourceList?.usuarioNombre ?? '';
 
     if (!isUserVerified || (!selectedUser && !resolvedUserName)) {
       errors.push('Selecciona un usuario e introduce su password o regístrate.');
@@ -201,7 +218,7 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
       nombre: trimmedName,
       fechaCompra: fechaCompra.trim(),
       lineas: finalLines,
-      usuarioId: selectedUser?.id ?? initialList?.usuarioId ?? '',
+      usuarioId: selectedUser?.id ?? sourceList?.usuarioId ?? '',
       usuarioNombre: resolvedUserName,
     });
   };
@@ -229,7 +246,11 @@ export const ListEditorScreen: React.FC<ListEditorScreenProps> = ({
             className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-50 truncate"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            {isEditing ? 'Editar lista' : 'Crear lista'}
+            {isEditing
+              ? 'Editar lista'
+              : isReusing
+              ? 'Reutilizar lista'
+              : 'Crear lista'}
           </h1>
         </header>
 

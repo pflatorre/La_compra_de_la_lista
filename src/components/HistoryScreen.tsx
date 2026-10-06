@@ -9,6 +9,7 @@ import {
   User,
   Lock,
   ChevronRight,
+  RotateCcw,
 } from 'lucide-react';
 import { AppUser, ShoppingList } from '../types';
 import {
@@ -21,6 +22,7 @@ import { NumericKeypadModal } from './NumericKeypadModal';
 interface HistoryScreenProps {
   lists: ShoppingList[];
   users: AppUser[];
+  onReuseList: (list: ShoppingList) => void;
   onDeleteList: (listId: string) => void;
   onUpdateUserPassword: (userId: string, newPassword: string) => void;
   onGoHome: () => void;
@@ -30,6 +32,7 @@ interface HistoryScreenProps {
 export const HistoryScreen: React.FC<HistoryScreenProps> = ({
   lists,
   users,
+  onReuseList,
   onDeleteList,
   onUpdateUserPassword,
   onGoHome,
@@ -90,8 +93,8 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
     return (
       <div className="min-h-screen flex flex-col">
         <div className="w-full max-w-2xl mx-auto px-4 pt-4 pb-16 flex-1 flex flex-col">
-          {/* Cabecera del detalle con botón Volver al listado del histórico y botón Borrar lista */}
-          <header className="flex items-center justify-between gap-3 mb-6">
+          {/* Cabecera del detalle con botón Volver al listado del histórico y botones Reutilizar lista / Borrar lista */}
+          <header className="flex flex-wrap items-center justify-between gap-2.5 mb-6">
             <div className="flex items-center gap-3 min-w-0">
               <button
                 type="button"
@@ -114,15 +117,27 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
               </h1>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setConfirmDelete((prev) => !prev)}
-              aria-label={`Borrar lista ${selectedList.nombre} del histórico`}
-              className="min-h-[48px] px-3.5 py-2 rounded-2xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-950/70 active:scale-[0.98] text-red-700 dark:text-red-300 border border-red-200/80 dark:border-red-900/60 text-sm font-semibold inline-flex items-center gap-2 transition-all whitespace-nowrap shrink-0"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Borrar lista</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => onReuseList(selectedList)}
+                aria-label={`Reutilizar lista ${selectedList.nombre}`}
+                className="min-h-[48px] px-3.5 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-sm font-semibold inline-flex items-center gap-2 shadow-xs transition-all whitespace-nowrap shrink-0"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Reutilizar lista</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setConfirmDelete((prev) => !prev)}
+                aria-label={`Borrar lista ${selectedList.nombre} del histórico`}
+                className="min-h-[48px] px-3.5 py-2 rounded-2xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-950/70 active:scale-[0.98] text-red-700 dark:text-red-300 border border-red-200/80 dark:border-red-900/60 text-sm font-semibold inline-flex items-center gap-2 transition-all whitespace-nowrap shrink-0"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Borrar lista</span>
+              </button>
+            </div>
           </header>
 
           <main className="flex-1">

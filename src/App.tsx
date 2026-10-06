@@ -427,13 +427,16 @@ export default function App() {
   if (view.type === 'create') {
     return (
       <ListEditorScreen
+        templateList={view.templateList}
         users={users}
         catalog={catalog}
         onCreateUser={handleCreateUser}
         onUpdateUserPassword={handleUpdateUserPassword}
         onAddCatalogProduct={handleAddCatalogProduct}
         onSaveList={handleCreateList}
-        onBack={() => setView({ type: 'home' })}
+        onBack={() =>
+          setView(view.templateList ? { type: 'history' } : { type: 'home' })
+        }
       />
     );
   }
@@ -503,6 +506,9 @@ export default function App() {
       <HistoryScreen
         lists={lists}
         users={users}
+        onReuseList={(listToReuse) =>
+          setView({ type: 'create', templateList: listToReuse })
+        }
         onDeleteList={handleDeleteList}
         onUpdateUserPassword={handleUpdateUserPassword}
         onGoHome={() => setView({ type: 'home' })}
