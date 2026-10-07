@@ -438,3 +438,74 @@ export async function toggleLineCheckInSupabase(
       .eq('id', listId),
   ]);
 }
+
+/**
+ * Verifica que las tablas y vistas REST de Supabase respondan correctamente.
+ */
+export async function verifySupabaseRestEndpoints(): Promise<{
+  ok: boolean;
+  message: string;
+}> {
+  if (!supabase) {
+    return {
+      ok: false,
+      message: 'Supabase no está configurado en las variables de entorno.',
+    };
+  }
+  const { error } = await supabase
+    .from('listas_compra')
+    .select('id')
+    .limit(1);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+  return { ok: true, message: 'Conexión con Supabase verificada correctamente.' };
+}
+
+/**
+ * Genera el código de Google Apps Script para enviar los recordatorios diarios a las 20:00h.
+ */
+export function generateGoogleAppsScriptCode(): string {
+  const url = supabaseUrl || 'https://TU_PROYECTO.supabase.co';
+  const key = supabaseAnonKey || 'TU_SUPABASE_ANON_KEY';
+  return `const SUPABASE_URL = '${url}';
+const SUPABASE_KEY = '${key}';
+
+function enviarRecordatoriosCompra() {
+  const url = \`\${SUPABASE_URL}/rest/v1/recordatorios_compra_manana?select=*\`;
+  const response = UrlFetchApp.fetch(url, {
+    method: 'get',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': \`Bearer \${SUPABASE_KEY}\`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  const listas = JSON.parse(response.getContentText());
+
+  listas.forEach((item) => {
+    const asunto = \`Recordatorio de compra para mañana: \${item.nombre_lista}\`;
+    const cuerpoMensaje = \`Estimado \${item.nombre_usuario},\\nte escribo para que te acuerdes de que mañana tienes previsto hacer la siguiente compra:\\n\${item.lineas_texto}\\n\\nUn saludo,\\nLa Compra de la Lista\`;
+
+    MailApp.sendEmail({
+      to: item.email_usuario,
+      subject: asunto,
+      body: cuerpoMensaje,
+      name: 'La Compra de la Lista'
+    });
+
+    UrlFetchApp.fetch(\`\${SUPABASE_URL}/rest/v1/listas_compra?id=eq.\${item.lista_id}\`, {
+      method: 'patch',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': \`Bearer \${SUPABASE_KEY}\`,
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify({ recordatorio_enviado: true })
+    });
+  });
+}`;
+}
+
