@@ -57,7 +57,7 @@ export function usePWAInstall() {
   };
 
   return {
-    isInstallable: !!deferredPrompt,
+    isInstallable: Boolean(deferredPrompt),
     isInstalled,
     isIOS,
     install,

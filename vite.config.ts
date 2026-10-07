@@ -11,20 +11,13 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: [
-          'icon.svg',
-          'apple-touch-icon.png',
-          'pwa-192x192.png',
-          'pwa-512x512.png',
-          'pwa-maskable-512x512.png',
-          'push-sw.js',
-        ],
+        includeAssets: ['icon.svg', 'apple-touch-icon.png'],
         manifest: {
           id: '/',
           name: 'La Compra de la Lista',
           short_name: 'La Compra',
           description:
-            'Crea y gestiona tus listas de la compra con recordatorios y modo supermercado.',
+            'Crea y gestiona tus listas de la compra del supermercado desde el móvil.',
           theme_color: '#059669',
           background_color: '#fafaf9',
           display: 'standalone',
@@ -52,7 +45,6 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          importScripts: ['/push-sw.js'],
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           runtimeCaching: [
             {
