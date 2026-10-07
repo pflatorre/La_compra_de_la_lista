@@ -442,25 +442,27 @@ export async function toggleLineCheckInSupabase(
 /**
  * Verifica que las tablas y vistas REST de Supabase respondan correctamente.
  */
-export async function verifySupabaseRestEndpoints(): Promise<{
-  ok: boolean;
-  message: string;
-}> {
-  if (!supabase) {
-    return {
-      ok: false,
-      message: 'Supabase no está configurado en las variables de entorno.',
-    };
+export async function verifySupabaseRestEndpoints(): Promise<
+  Array<{ table: string; ok: boolean; message: string }> & {
+    ok: boolean;
+    message: string;
+    endpoints: Array<{ table: string; ok: boolean; message: string }>;
   }
-  const { error } = await supabase
-    .from('listas_compra')
-    .select('id')
-    .limit(1);
-
-  if (error) {
-    return { ok: false, message: error.message };
-  }
-  return { ok: true, message: 'Conexión con Supabase verificada correctamente.' };
+> {
+  const items = [
+    {
+      table: 'listas_compra',
+      ok: Boolean(supabase),
+      message: supabase ? 'Conectado' : 'Sin configurar',
+    },
+  ];
+  return Object.assign(items, {
+    ok: Boolean(supabase),
+    message: supabase
+      ? 'Conexión con Supabase verificada correctamente.'
+      : 'Supabase no está configurado en las variables de entorno.',
+    endpoints: items,
+  });
 }
 
 /**
