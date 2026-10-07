@@ -83,6 +83,7 @@ interface DbUsuarioRow {
   id: string;
   nombre: string;
   email?: string | null;
+  recibir_recordatorio?: boolean | null;
   password: string;
 }
 
@@ -130,6 +131,7 @@ export async function fetchAllDataFromSupabase(): Promise<{
         id: u.id,
         nombre: u.nombre,
         ...(u.email ? { email: u.email } : {}),
+        recibirRecordatorio: Boolean(u.recibir_recordatorio && u.email),
         password: u.password,
       }))
     : [];
@@ -186,46 +188,76 @@ export async function fetchAllDataFromSupabase(): Promise<{
 
 export async function createUserInSupabase(user: AppUser): Promise<void> {
   if (!supabase) return;
+  const shouldRemind = Boolean(
+    user.email && user.email.trim().length > 0 && user.recibirRecordatorio
+  );
+
   const { error } = await supabase.from('usuarios').insert({
     id: user.id,
     nombre: user.nombre,
     email: user.email || null,
+    recibir_recordatorio: shouldRemind,
     password: user.password,
   });
 
-  // Si aún no se ha ejecutado el ALTER TABLE para añadir la columna email, insertar sin email
+  // Si aún no se ha ejecutado el ALTER TABLE para añadir recibir_recordatorio o email, hacer fallback progresivo
   if (error) {
-    const { error: fallbackErr } = await supabase.from('usuarios').insert({
+    const { error: fallbackEmailErr } = await supabase.from('usuarios').insert({
       id: user.id,
       nombre: user.nombre,
+      email: user.email || null,
       password: user.password,
     });
-    if (fallbackErr) throw fallbackErr;
+    if (fallbackEmailErr) {
+      const { error: fallbackBasicErr } = await supabase
+        .from('usuarios')
+        .insert({
+          id: user.id,
+          nombre: user.nombre,
+          password: user.password,
+        });
+      if (fallbackBasicErr) throw fallbackBasicErr;
+    }
   }
 }
 
 export async function updateUserProfileInSupabase(
   userId: string,
-  data: { nombre: string; email?: string }
+  data: { nombre: string; email?: string; recibirRecordatorio?: boolean }
 ): Promise<void> {
   if (!supabase) return;
+
+  const shouldRemind = Boolean(
+    data.email && data.email.trim().length > 0 && data.recibirRecordatorio
+  );
 
   const { error } = await supabase
     .from('usuarios')
     .update({
       nombre: data.nombre,
       email: data.email || null,
+      recibir_recordatorio: shouldRemind,
     })
     .eq('id', userId);
 
   if (error) {
-    const { error: fallbackErr } = await supabase
+    const { error: fallbackEmailErr } = await supabase
       .from('usuarios')
       .update({
         nombre: data.nombre,
+        email: data.email || null,
       })
       .eq('id', userId);
-    if (fallbackErr) throw fallbackErr;
+
+    if (fallbackEmailErr) {
+      const { error: fallbackBasicErr } = await supabase
+        .from('usuarios')
+        .update({
+          nombre: data.nombre,
+        })
+        .eq('id', userId);
+      if (fallbackBasicErr) throw fallbackBasicErr;
+    }
   }
 
   // Actualizar también el nombre cacheado en listas_compra de este usuario

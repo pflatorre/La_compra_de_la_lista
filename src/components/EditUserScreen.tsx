@@ -4,7 +4,10 @@ import { AppUser } from '../types';
 
 interface EditUserScreenProps {
   user: AppUser;
-  onSaveUser: (userId: string, data: { nombre: string; email: string }) => void;
+  onSaveUser: (
+    userId: string,
+    data: { nombre: string; email: string; recibirRecordatorio: boolean }
+  ) => void;
   onBack: () => void;
 }
 
@@ -15,6 +18,9 @@ export const EditUserScreen: React.FC<EditUserScreenProps> = ({
 }) => {
   const [nombre, setNombre] = useState(user.nombre);
   const [email, setEmail] = useState(user.email ?? '');
+  const [sendReminderChecked, setSendReminderChecked] = useState<boolean>(
+    Boolean(user.recibirRecordatorio && user.email)
+  );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -27,9 +33,13 @@ export const EditUserScreen: React.FC<EditUserScreenProps> = ({
       return;
     }
 
+    const shouldReceiveReminder =
+      trimmedEmail.length > 0 && sendReminderChecked;
+
     onSaveUser(user.id, {
       nombre: trimmedName,
       email: trimmedEmail,
+      recibirRecordatorio: shouldReceiveReminder,
     });
   };
 
@@ -82,7 +92,7 @@ export const EditUserScreen: React.FC<EditUserScreenProps> = ({
               </div>
             </div>
 
-            {/* Nuevo campo para poner el correo electrónico del usuario */}
+            {/* Campo para poner o editar el correo electrónico del usuario */}
             <div>
               <label
                 htmlFor="edit-user-email"
@@ -105,6 +115,36 @@ export const EditUserScreen: React.FC<EditUserScreenProps> = ({
                 />
               </div>
             </div>
+
+            {/* Casilla para marcar si se quiere recibir un correo recordatorio de la compra */}
+            <label
+              htmlFor="edit-user-reminder-checkbox"
+              className="flex items-start gap-3.5 p-4 rounded-2xl bg-stone-50/80 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800 cursor-pointer select-none"
+            >
+              <input
+                id="edit-user-reminder-checkbox"
+                type="checkbox"
+                checked={sendReminderChecked}
+                onChange={(e) => setSendReminderChecked(e.target.checked)}
+                className="mt-0.5 w-5 h-5 rounded border-stone-300 text-emerald-600 focus:ring-emerald-600 shrink-0 accent-emerald-600"
+              />
+              <div className="text-xs sm:text-sm leading-relaxed">
+                <span className="font-semibold text-stone-800 dark:text-stone-200 block">
+                  Marca esta casilla si quieres recibir un correo recordatorio de la compra
+                </span>
+                <span
+                  className={`mt-1 block text-xs font-medium ${
+                    sendReminderChecked && email.trim().length > 0
+                      ? 'text-emerald-700 dark:text-emerald-400'
+                      : 'text-stone-500 dark:text-stone-400'
+                  }`}
+                >
+                  {sendReminderChecked && email.trim().length > 0
+                    ? '✓ Se enviará el día antes de la compra a las 20:00h.'
+                    : 'Se enviará el día antes de la compra a las 20:00h (requiere marcar la casilla e indicar correo).'}
+                </span>
+              </div>
+            </label>
           </section>
 
           {errorMsg && (

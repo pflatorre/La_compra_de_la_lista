@@ -4,6 +4,7 @@ export interface AppUser {
   id: string;
   nombre: string;
   email?: string;
+  recibirRecordatorio?: boolean;
   password: string; // 4 dígitos numéricos (0-9)
 }
 

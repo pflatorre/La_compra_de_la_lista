@@ -153,7 +153,14 @@ export default function App() {
   }, []);
 
   const handleUpdateUserProfile = useCallback(
-    (userId: string, data: { nombre: string; email: string }) => {
+    (
+      userId: string,
+      data: { nombre: string; email: string; recibirRecordatorio: boolean }
+    ) => {
+      const shouldRemind = Boolean(
+        data.email && data.email.trim().length > 0 && data.recibirRecordatorio
+      );
+
       setUsers((prev) =>
         prev.map((u) =>
           u.id === userId
@@ -161,6 +168,7 @@ export default function App() {
                 ...u,
                 nombre: data.nombre,
                 ...(data.email ? { email: data.email } : { email: undefined }),
+                recibirRecordatorio: shouldRemind,
               }
             : u
         )
@@ -172,7 +180,10 @@ export default function App() {
       );
 
       if (isSupabaseConfigured) {
-        updateUserProfileInSupabase(userId, data).catch((err) =>
+        updateUserProfileInSupabase(userId, {
+          ...data,
+          recibirRecordatorio: shouldRemind,
+        }).catch((err) =>
           console.error('Error actualizando usuario en Supabase:', err)
         );
       }

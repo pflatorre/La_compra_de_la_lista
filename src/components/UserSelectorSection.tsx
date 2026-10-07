@@ -38,6 +38,7 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
+  const [sendReminderChecked, setSendReminderChecked] = useState(false);
   const [newUserPin, setNewUserPin] = useState('');
   const [showCreateKeypad, setShowCreateKeypad] = useState(false);
   const [pendingVerifyUser, setPendingVerifyUser] = useState<AppUser | null>(
@@ -67,16 +68,22 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
   const completeUserCreation = (
     nameToUse: string,
     emailToUse: string,
-    pinToUse: string
+    pinToUse: string,
+    reminderBoxChecked: boolean
   ) => {
     const trimmedName = nameToUse.trim();
     const trimmedEmail = emailToUse.trim();
     if (!trimmedName || pinToUse.length !== 4) return;
 
+    // Solo se envía el correo si se ha puesto correo electrónico Y se ha marcado la casilla
+    const shouldReceiveReminder =
+      trimmedEmail.length > 0 && reminderBoxChecked;
+
     const created: AppUser = {
       id: generateId(),
       nombre: trimmedName,
       ...(trimmedEmail ? { email: trimmedEmail } : {}),
+      recibirRecordatorio: shouldReceiveReminder,
       password: pinToUse,
     };
 
@@ -84,6 +91,7 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
     onSelectVerifiedUser(created);
     setNewUserName('');
     setNewUserEmail('');
+    setSendReminderChecked(false);
     setNewUserPin('');
     setRegisterError(null);
     setShowRegisterForm(false);
@@ -96,7 +104,12 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
 
     // Si ya se había escrito el nombre, al confirmar el password queda creado y verificado el usuario
     if (newUserName.trim().length > 0) {
-      completeUserCreation(newUserName, newUserEmail, pin);
+      completeUserCreation(
+        newUserName,
+        newUserEmail,
+        pin,
+        sendReminderChecked
+      );
     }
   };
 
@@ -109,7 +122,12 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
       setRegisterError('Pulsa en "Generar password" e introduce los 4 números.');
       return;
     }
-    completeUserCreation(newUserName, newUserEmail, newUserPin);
+    completeUserCreation(
+      newUserName,
+      newUserEmail,
+      newUserPin,
+      sendReminderChecked
+    );
   };
 
   const handleClickUserOption = (user: AppUser) => {
@@ -291,6 +309,36 @@ export const UserSelectorSection: React.FC<UserSelectorSectionProps> = ({
                 className="w-full min-h-[48px] px-3.5 py-2.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-base font-medium focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
               />
             </div>
+
+            {/* Casilla para marcar si se desea recibir un correo recordatorio de la compra */}
+            <label
+              htmlFor="new-user-reminder-checkbox"
+              className="flex items-start gap-3 p-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 cursor-pointer select-none"
+            >
+              <input
+                id="new-user-reminder-checkbox"
+                type="checkbox"
+                checked={sendReminderChecked}
+                onChange={(e) => setSendReminderChecked(e.target.checked)}
+                className="mt-0.5 w-5 h-5 rounded border-stone-300 text-emerald-600 focus:ring-emerald-600 shrink-0 accent-emerald-600"
+              />
+              <div className="text-xs leading-relaxed">
+                <span className="font-semibold text-stone-800 dark:text-stone-200 block">
+                  Marca esta casilla si quieres recibir un correo recordatorio de la compra
+                </span>
+                <span
+                  className={`mt-0.5 block font-medium ${
+                    sendReminderChecked && newUserEmail.trim().length > 0
+                      ? 'text-emerald-700 dark:text-emerald-400'
+                      : 'text-stone-500 dark:text-stone-400'
+                  }`}
+                >
+                  {sendReminderChecked && newUserEmail.trim().length > 0
+                    ? '✓ Se enviará el día antes de la compra a las 20:00h.'
+                    : 'Se enviará el día antes de la compra a las 20:00h (requiere marcar la casilla e indicar correo).'}
+                </span>
+              </div>
+            </label>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <button
