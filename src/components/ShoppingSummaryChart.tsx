@@ -204,9 +204,6 @@ export const ShoppingSummaryChart: React.FC<ShoppingSummaryChartProps> = ({
 
       {/* Desplegable de usuarios con verificación de contraseña */}
       <div className="relative" ref={dropdownRef}>
-        <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">
-          Usuario para ver tendencias de consumo
-        </label>
         <button
           type="button"
           onClick={() => setDropdownOpen((prev) => !prev)}

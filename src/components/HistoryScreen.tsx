@@ -548,14 +548,9 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
           {completedLists.length > 0 ? (
             filteredLists.length > 0 ? (
               <div className="space-y-3.5">
-                <div className="flex items-center justify-between px-1">
+                <div className="px-1">
                   <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">
-                    {hasActiveFilters
-                      ? `Mostrando ${filteredLists.length} de ${completedLists.length} listas`
-                      : `Listas archivadas (${completedLists.length})`}
-                  </span>
-                  <span className="text-xs text-stone-400 dark:text-stone-500">
-                    Toca una lista para ver el detalle
+                    Listas archivadas ({filteredLists.length}), toca una lista para ver su detalle y opciones
                   </span>
                 </div>
 

@@ -190,7 +190,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
               <div className="px-1">
                 <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">
-                  Próximas compras ({filteredActiveLists.length}), pincha en una lista para ver opciones
+                  Próximas compras ({filteredActiveLists.length}), toca una lista para ver opciones
                 </span>
               </div>
 
