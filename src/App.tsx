@@ -80,6 +80,7 @@ export default function App() {
   useEffect(() => {
     const archiveExpiredLists = () => {
       const today = getTodayDateString();
+      const archivedAt = new Date().toISOString();
       setLists((prev) => {
         const expired = prev.filter(
           (l) => l.estado !== 'realizada' && l.fechaCompra < today
@@ -88,7 +89,11 @@ export default function App() {
 
         if (isSupabaseConfigured) {
           for (const expList of expired) {
-            updateListStatusInSupabase(expList.id, 'realizada').catch((err) =>
+            updateListStatusInSupabase(
+              expList.id,
+              'realizada',
+              expList.fechaFinalizacion || archivedAt
+            ).catch((err) =>
               console.error(
                 'Error pasando lista vencida al histórico en Supabase:',
                 err
@@ -99,7 +104,11 @@ export default function App() {
 
         return prev.map((l) =>
           l.estado !== 'realizada' && l.fechaCompra < today
-            ? { ...l, estado: 'realizada' }
+            ? {
+                ...l,
+                estado: 'realizada',
+                fechaFinalizacion: l.fechaFinalizacion || archivedAt,
+              }
             : l
         );
       });

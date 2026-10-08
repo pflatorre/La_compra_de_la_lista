@@ -414,11 +414,16 @@ export async function updateListStatusInSupabase(
   fechaFinalizacion?: string
 ): Promise<void> {
   if (!supabase) return;
+  const resolvedFechaFinalizacion =
+    estado === 'realizada'
+      ? fechaFinalizacion || new Date().toISOString()
+      : fechaFinalizacion ?? null;
+
   const { error } = await supabase
     .from('listas_compra')
     .update({
       estado,
-      fecha_finalizacion: fechaFinalizacion ?? null,
+      fecha_finalizacion: resolvedFechaFinalizacion,
     })
     .eq('id', listId);
   if (error) throw error;
