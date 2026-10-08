@@ -168,7 +168,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   htmlFor="home-user-filter-select"
                   className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1.5"
                 >
-                  Filtrar por usuario
+                  Filtrar las listas por usuario
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -188,14 +188,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between px-1">
+              <div className="px-1">
                 <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">
-                  {selectedUserFilter
-                    ? `Próximas compras de ${selectedUserFilter} (${filteredActiveLists.length})`
-                    : `Próximas compras (${activeLists.length})`}
-                </span>
-                <span className="text-xs text-stone-400 dark:text-stone-500">
-                  Toca una lista para ver opciones
+                  Próximas compras ({filteredActiveLists.length}), pincha en una lista para ver opciones
                 </span>
               </div>
 
