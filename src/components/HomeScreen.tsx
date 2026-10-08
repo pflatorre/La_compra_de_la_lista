@@ -43,37 +43,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     <div className="min-h-screen flex flex-col">
       <div className="w-full max-w-2xl mx-auto px-4 pt-6 pb-16 flex-1 flex flex-col">
         {/* 1. Título de la aplicación con logotipo de carro de la compra y botón Configuración arriba a la derecha */}
-        <header className="mb-5 flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div
-              aria-hidden="true"
-              className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white flex items-center justify-center shadow-sm shadow-emerald-900/15 shrink-0"
-            >
-              <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.25]" />
-            </div>
-            <div className="min-w-0">
+        <header className="mb-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div
+                aria-hidden="true"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white flex items-center justify-center shadow-sm shadow-emerald-900/15 shrink-0"
+              >
+                <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.25]" />
+              </div>
               <h1
                 className="text-3xl sm:text-4xl font-bold tracking-tight text-stone-900 dark:text-stone-50"
                 style={{ fontFamily: 'var(--font-display)', textWrap: 'balance' }}
               >
                 La Compra de la Lista
               </h1>
-              <p className="mt-0.5 text-sm text-stone-600 dark:text-stone-400">
-                Crea y gestiona tus listas de la compra...{' '}
-                <em className="italic">by PabloFL</em>
-              </p>
             </div>
+
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              aria-label="Configuración"
+              title="Configuración"
+              className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-[0.98] text-stone-700 dark:text-stone-200 border border-stone-200/90 dark:border-stone-800 flex items-center justify-center shadow-xs transition-all shrink-0"
+            >
+              <Settings className="w-5 h-5 text-stone-600 dark:text-stone-300" />
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            aria-label="Configuración"
-            title="Configuración"
-            className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-[0.98] text-stone-700 dark:text-stone-200 border border-stone-200/90 dark:border-stone-800 flex items-center justify-center shadow-xs transition-all shrink-0"
-          >
-            <Settings className="w-5 h-5 text-stone-600 dark:text-stone-300" />
-          </button>
+          <p className="mt-2.5 text-sm text-stone-600 dark:text-stone-400">
+            Crea y gestiona tus listas de la compra...{' '}
+            <em className="italic">by PabloFL</em>
+          </p>
         </header>
 
         {/* 2. Barra de botones entre el título y las listas (solo Nueva lista e Histórico) */}

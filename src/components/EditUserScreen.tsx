@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { ArrowLeft, CheckCircle2, User, Mail, AlertCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  User,
+  Mail,
+  AlertCircle,
+  Trash2,
+  AlertTriangle,
+} from 'lucide-react';
 import { AppUser } from '../types';
 
 interface EditUserScreenProps {
@@ -8,12 +16,14 @@ interface EditUserScreenProps {
     userId: string,
     data: { nombre: string; email: string; recibirRecordatorio: boolean }
   ) => void;
+  onDeleteUser: (userId: string) => void;
   onBack: () => void;
 }
 
 export const EditUserScreen: React.FC<EditUserScreenProps> = ({
   user,
   onSaveUser,
+  onDeleteUser,
   onBack,
 }) => {
   const [nombre, setNombre] = useState(user.nombre);
@@ -22,6 +32,7 @@ export const EditUserScreen: React.FC<EditUserScreenProps> = ({
     Boolean(user.recibirRecordatorio && user.email)
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,15 +168,77 @@ export const EditUserScreen: React.FC<EditUserScreenProps> = ({
             </div>
           )}
 
-          <button
-            type="submit"
-            className="w-full min-h-[56px] px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-base flex items-center justify-center gap-2.5 shadow-md shadow-emerald-900/10 transition-all whitespace-nowrap"
-          >
-            <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
-            <span>Guardar</span>
-          </button>
+          <div className="space-y-3">
+            <button
+              type="submit"
+              className="w-full min-h-[56px] px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-base flex items-center justify-center gap-2.5 shadow-md shadow-emerald-900/10 transition-all whitespace-nowrap"
+            >
+              <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+              <span>Guardar</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowDeleteDialog(true)}
+              className="w-full min-h-[52px] px-6 py-3 rounded-2xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-950/70 active:scale-[0.99] text-red-700 dark:text-red-300 border border-red-200/80 dark:border-red-900/60 font-bold text-base flex items-center justify-center gap-2 transition-all whitespace-nowrap"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span>Eliminar Usuario</span>
+            </button>
+          </div>
         </form>
       </div>
+
+      {/* Cuadro de diálogo de confirmación para Eliminar Usuario */}
+      {showDeleteDialog && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-label="Confirmar eliminación de usuario"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+        >
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl p-6 space-y-5">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-red-100 dark:bg-red-950/70 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h2
+                  className="text-lg font-bold text-stone-900 dark:text-stone-100 leading-snug"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  ¿Está usted seguro de eliminar su usuario?
+                </h2>
+                <p className="mt-1.5 text-xs sm:text-sm text-stone-600 dark:text-stone-400">
+                  Se eliminará el usuario <strong>{user.nombre}</strong> y todas sus listas y datos de toda la aplicación.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  onDeleteUser(user.id);
+                }}
+                className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Confirmar la eliminación</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowDeleteDialog(false)}
+                className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 active:scale-[0.98] text-stone-800 dark:text-stone-200 font-semibold text-sm flex items-center justify-center transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -20,6 +20,7 @@ import {
   createUserInSupabase,
   updateUserProfileInSupabase,
   updateUserPasswordInSupabase,
+  deleteUserAndDataInSupabase,
   insertCatalogProductInSupabase,
   createShoppingListInSupabase,
   updateShoppingListInSupabase,
@@ -286,6 +287,38 @@ export default function App() {
     []
   );
 
+  const handleDeleteUser = useCallback((userId: string) => {
+    let deletedUserName: string | undefined;
+
+    setUsers((prev) => {
+      const target = prev.find((u) => u.id === userId);
+      deletedUserName = target?.nombre;
+      return prev.filter((u) => u.id !== userId);
+    });
+
+    setLists((prev) =>
+      prev.filter((list) => {
+        if (list.usuarioId === userId) return false;
+        if (
+          !list.usuarioId &&
+          deletedUserName &&
+          list.usuarioNombre?.toLowerCase() === deletedUserName.toLowerCase()
+        ) {
+          return false;
+        }
+        return true;
+      })
+    );
+
+    if (isSupabaseConfigured) {
+      deleteUserAndDataInSupabase(userId, deletedUserName).catch((err) =>
+        console.error('Error eliminando usuario y sus datos en Supabase:', err)
+      );
+    }
+
+    setView({ type: 'users' });
+  }, []);
+
   const handleAddCatalogProduct = useCallback((productName: string) => {
     setCatalog((prev) => addProductToCatalog(prev, productName));
     if (isSupabaseConfigured) {
@@ -549,6 +582,7 @@ export default function App() {
         <EditUserScreen
           user={targetUser}
           onSaveUser={handleUpdateUserProfile}
+          onDeleteUser={handleDeleteUser}
           onBack={() => setView({ type: 'users' })}
         />
       );

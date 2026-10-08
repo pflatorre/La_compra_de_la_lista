@@ -283,6 +283,38 @@ export async function updateUserPasswordInSupabase(
   if (error) throw error;
 }
 
+export async function deleteUserAndDataInSupabase(
+  userId: string,
+  userName?: string
+): Promise<void> {
+  if (!supabase) return;
+
+  // 1. Buscar todas las listas del usuario para borrar también sus líneas
+  const { data: userLists } = await supabase
+    .from('listas_compra')
+    .select('id')
+    .eq('usuario_id', userId);
+
+  const listIds = (userLists ?? []).map((r: { id: string }) => r.id);
+  if (listIds.length > 0) {
+    await supabase.from('lineas_compra').delete().in('lista_id', listIds);
+    await supabase.from('listas_compra').delete().in('id', listIds);
+  }
+
+  // Por si hubiera listas antiguas asociadas solo por nombre
+  if (userName && userName.trim()) {
+    await supabase
+      .from('listas_compra')
+      .delete()
+      .is('usuario_id', null)
+      .eq('usuario_nombre', userName.trim());
+  }
+
+  // 2. Eliminar el usuario de la tabla usuarios
+  const { error } = await supabase.from('usuarios').delete().eq('id', userId);
+  if (error) throw error;
+}
+
 export async function insertCatalogProductInSupabase(
   nombre: string
 ): Promise<void> {

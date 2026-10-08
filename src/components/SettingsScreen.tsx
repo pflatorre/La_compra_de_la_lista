@@ -124,7 +124,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                         safeUsersCount === 1
                           ? 'usuario registrado'
                           : 'usuarios registrados'
-                      } · Editar nombre y correo`}
+                      }`}
                 </p>
               </div>
             </div>

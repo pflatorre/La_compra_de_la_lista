@@ -47,7 +47,7 @@ export const UsersManagementScreen: React.FC<UsersManagementScreenProps> = ({
           {users.length > 0 ? (
             <div className="space-y-3">
               <p className="text-xs font-semibold text-stone-500 dark:text-stone-400 px-1">
-                Toca sobre un usuario e introduce su password para editar sus datos
+                Toca sobre tu usuario e introduce el password para editar o eliminar tu cuenta
               </p>
 
               {users.map((user) => (
