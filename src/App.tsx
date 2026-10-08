@@ -27,6 +27,7 @@ import {
   updateListStatusInSupabase,
   updateListCostInSupabase,
   toggleLineCheckInSupabase,
+  syncLocalStateToSupabase,
 } from './lib/supabase';
 import { HomeScreen } from './components/HomeScreen';
 import { ListEditorScreen } from './components/ListEditorScreen';
@@ -35,6 +36,7 @@ import { HistoryScreen } from './components/HistoryScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { UsersManagementScreen } from './components/UsersManagementScreen';
 import { EditUserScreen } from './components/EditUserScreen';
+import { OfflineBanner } from './components/OfflineBanner';
 
 export default function App() {
   const [lists, setLists] = useState<ShoppingList[]>(() => loadLists());
@@ -42,6 +44,12 @@ export default function App() {
   const [users, setUsers] = useState<AppUser[]>(() => loadUsers());
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
   const [view, setView] = useState<ScreenView>({ type: 'home' });
+  const [isOnline, setIsOnline] = useState<boolean>(() =>
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced'>(
+    'idle'
+  );
 
   // Si Supabase está configurado, cargamos las listas, el catálogo y los usuarios al iniciar
   useEffect(() => {
@@ -144,6 +152,65 @@ export default function App() {
       root.classList.remove('dark');
     }
   }, [theme]);
+
+  // Detectar pérdida y recuperación de conexión y sincronizar datos al volver a estar online
+  useEffect(() => {
+    const handleOffline = () => {
+      setIsOnline(false);
+      setSyncStatus('idle');
+    };
+
+    const handleOnline = async () => {
+      setIsOnline(true);
+      if (!isSupabaseConfigured) {
+        setSyncStatus('synced');
+        setTimeout(() => setSyncStatus('idle'), 3000);
+        return;
+      }
+
+      try {
+        setSyncStatus('syncing');
+        await syncLocalStateToSupabase({
+          lists: loadLists(),
+          catalog: loadCatalog(),
+          users: loadUsers(),
+        });
+        const remote = await fetchAllDataFromSupabase();
+        if (remote.lists.length > 0) {
+          setLists(remote.lists);
+        }
+        if (remote.catalog.length > 0) {
+          setCatalog((prev) => {
+            let merged = [...prev];
+            for (const item of remote.catalog) {
+              merged = addProductToCatalog(merged, item);
+            }
+            return merged;
+          });
+        }
+        if (remote.users.length > 0) {
+          setUsers((prev) => {
+            const map = new Map<string, AppUser>();
+            for (const u of prev) map.set(u.id, u);
+            for (const u of remote.users) map.set(u.id, u);
+            return Array.from(map.values());
+          });
+        }
+        setSyncStatus('synced');
+        setTimeout(() => setSyncStatus('idle'), 3500);
+      } catch (err) {
+        console.error('Error sincronizando al recuperar conexión:', err);
+        setSyncStatus('idle');
+      }
+    };
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
 
   const handleToggleTheme = useCallback(() => {
     setTheme((prev) => {
@@ -435,35 +502,20 @@ export default function App() {
     []
   );
 
-  if (view.type === 'settings') {
-    return (
-      <SettingsScreen
-        theme={theme}
-        usersCount={users.length}
-        onToggleTheme={handleToggleTheme}
-        onOpenUsersManagement={() => setView({ type: 'users' })}
-        onBack={() => setView({ type: 'home' })}
-      />
-    );
-  }
+  const renderCurrentScreen = () => {
+    if (view.type === 'settings') {
+      return (
+        <SettingsScreen
+          theme={theme}
+          usersCount={users.length}
+          onToggleTheme={handleToggleTheme}
+          onOpenUsersManagement={() => setView({ type: 'users' })}
+          onBack={() => setView({ type: 'home' })}
+        />
+      );
+    }
 
-  if (view.type === 'users') {
-    return (
-      <UsersManagementScreen
-        users={users}
-        onSelectVerifiedUserForEdit={(userId) =>
-          setView({ type: 'editUser', userId })
-        }
-        onUpdateUserPassword={handleUpdateUserPassword}
-        onPasswordChangeComplete={() => setView({ type: 'home' })}
-        onBack={() => setView({ type: 'settings' })}
-      />
-    );
-  }
-
-  if (view.type === 'editUser') {
-    const targetUser = users.find((u) => u.id === view.userId);
-    if (!targetUser) {
+    if (view.type === 'users') {
       return (
         <UsersManagementScreen
           users={users}
@@ -477,120 +529,144 @@ export default function App() {
       );
     }
 
-    return (
-      <EditUserScreen
-        user={targetUser}
-        onSaveUser={handleUpdateUserProfile}
-        onBack={() => setView({ type: 'users' })}
-      />
-    );
-  }
+    if (view.type === 'editUser') {
+      const targetUser = users.find((u) => u.id === view.userId);
+      if (!targetUser) {
+        return (
+          <UsersManagementScreen
+            users={users}
+            onSelectVerifiedUserForEdit={(userId) =>
+              setView({ type: 'editUser', userId })
+            }
+            onUpdateUserPassword={handleUpdateUserPassword}
+            onPasswordChangeComplete={() => setView({ type: 'home' })}
+            onBack={() => setView({ type: 'settings' })}
+          />
+        );
+      }
 
-  if (view.type === 'create') {
-    return (
-      <ListEditorScreen
-        templateList={view.templateList}
-        users={users}
-        catalog={catalog}
-        onCreateUser={handleCreateUser}
-        onUpdateUserPassword={handleUpdateUserPassword}
-        onAddCatalogProduct={handleAddCatalogProduct}
-        onSaveList={handleCreateList}
-        onBack={() =>
-          setView(view.templateList ? { type: 'history' } : { type: 'home' })
-        }
-      />
-    );
-  }
-
-  if (view.type === 'edit') {
-    const targetList = lists.find((l) => l.id === view.listId);
-    if (!targetList) {
       return (
-        <HomeScreen
+        <EditUserScreen
+          user={targetUser}
+          onSaveUser={handleUpdateUserProfile}
+          onBack={() => setView({ type: 'users' })}
+        />
+      );
+    }
+
+    if (view.type === 'create') {
+      return (
+        <ListEditorScreen
+          templateList={view.templateList}
+          users={users}
+          catalog={catalog}
+          onCreateUser={handleCreateUser}
+          onUpdateUserPassword={handleUpdateUserPassword}
+          onAddCatalogProduct={handleAddCatalogProduct}
+          onSaveList={handleCreateList}
+          onBack={() =>
+            setView(view.templateList ? { type: 'history' } : { type: 'home' })
+          }
+        />
+      );
+    }
+
+    if (view.type === 'edit') {
+      const targetList = lists.find((l) => l.id === view.listId);
+      if (!targetList) {
+        return (
+          <HomeScreen
+            lists={lists}
+            users={users}
+            onOpenSettings={() => setView({ type: 'settings' })}
+            onNewList={() => setView({ type: 'create' })}
+            onOpenHistory={() => setView({ type: 'history' })}
+            onStartShopping={handleStartShopping}
+            onEditList={(id) => setView({ type: 'edit', listId: id })}
+            onDeleteList={handleDeleteList}
+            onUpdateUserPassword={handleUpdateUserPassword}
+          />
+        );
+      }
+
+      return (
+        <ListEditorScreen
+          initialList={targetList}
+          users={users}
+          catalog={catalog}
+          onCreateUser={handleCreateUser}
+          onUpdateUserPassword={handleUpdateUserPassword}
+          onAddCatalogProduct={handleAddCatalogProduct}
+          onSaveList={(data) => handleUpdateList(targetList.id, data)}
+          onBack={() => setView({ type: 'home' })}
+        />
+      );
+    }
+
+    if (view.type === 'shopping') {
+      const targetList = lists.find((l) => l.id === view.listId);
+      if (!targetList) {
+        return (
+          <HomeScreen
+            lists={lists}
+            users={users}
+            onOpenSettings={() => setView({ type: 'settings' })}
+            onNewList={() => setView({ type: 'create' })}
+            onOpenHistory={() => setView({ type: 'history' })}
+            onStartShopping={handleStartShopping}
+            onEditList={(id) => setView({ type: 'edit', listId: id })}
+            onDeleteList={handleDeleteList}
+            onUpdateUserPassword={handleUpdateUserPassword}
+          />
+        );
+      }
+
+      return (
+        <ShoppingModeScreen
+          list={targetList}
+          onToggleLineCheck={handleToggleLineCheck}
+          onFinishShopping={handleFinishShopping}
+          onExitShopping={handleExitShopping}
+        />
+      );
+    }
+
+    if (view.type === 'history') {
+      return (
+        <HistoryScreen
           lists={lists}
           users={users}
-          onOpenSettings={() => setView({ type: 'settings' })}
-          onNewList={() => setView({ type: 'create' })}
-          onOpenHistory={() => setView({ type: 'history' })}
-          onStartShopping={handleStartShopping}
-          onEditList={(id) => setView({ type: 'edit', listId: id })}
+          onReuseList={(listToReuse) =>
+            setView({ type: 'create', templateList: listToReuse })
+          }
+          onUpdateListCost={handleUpdateListCost}
           onDeleteList={handleDeleteList}
           onUpdateUserPassword={handleUpdateUserPassword}
+          onGoHome={() => setView({ type: 'home' })}
+          onBack={() => setView({ type: 'home' })}
         />
       );
     }
 
     return (
-      <ListEditorScreen
-        initialList={targetList}
-        users={users}
-        catalog={catalog}
-        onCreateUser={handleCreateUser}
-        onUpdateUserPassword={handleUpdateUserPassword}
-        onAddCatalogProduct={handleAddCatalogProduct}
-        onSaveList={(data) => handleUpdateList(targetList.id, data)}
-        onBack={() => setView({ type: 'home' })}
-      />
-    );
-  }
-
-  if (view.type === 'shopping') {
-    const targetList = lists.find((l) => l.id === view.listId);
-    if (!targetList) {
-      return (
-        <HomeScreen
-          lists={lists}
-          users={users}
-          onOpenSettings={() => setView({ type: 'settings' })}
-          onNewList={() => setView({ type: 'create' })}
-          onOpenHistory={() => setView({ type: 'history' })}
-          onStartShopping={handleStartShopping}
-          onEditList={(id) => setView({ type: 'edit', listId: id })}
-          onDeleteList={handleDeleteList}
-          onUpdateUserPassword={handleUpdateUserPassword}
-        />
-      );
-    }
-
-    return (
-      <ShoppingModeScreen
-        list={targetList}
-        onToggleLineCheck={handleToggleLineCheck}
-        onFinishShopping={handleFinishShopping}
-        onExitShopping={handleExitShopping}
-      />
-    );
-  }
-
-  if (view.type === 'history') {
-    return (
-      <HistoryScreen
+      <HomeScreen
         lists={lists}
         users={users}
-        onReuseList={(listToReuse) =>
-          setView({ type: 'create', templateList: listToReuse })
-        }
-        onUpdateListCost={handleUpdateListCost}
+        onOpenSettings={() => setView({ type: 'settings' })}
+        onNewList={() => setView({ type: 'create' })}
+        onOpenHistory={() => setView({ type: 'history' })}
+        onStartShopping={handleStartShopping}
+        onEditList={(id) => setView({ type: 'edit', listId: id })}
         onDeleteList={handleDeleteList}
         onUpdateUserPassword={handleUpdateUserPassword}
-        onGoHome={() => setView({ type: 'home' })}
-        onBack={() => setView({ type: 'home' })}
       />
     );
-  }
+  };
 
   return (
-    <HomeScreen
-      lists={lists}
-      users={users}
-      onOpenSettings={() => setView({ type: 'settings' })}
-      onNewList={() => setView({ type: 'create' })}
-      onOpenHistory={() => setView({ type: 'history' })}
-      onStartShopping={handleStartShopping}
-      onEditList={(id) => setView({ type: 'edit', listId: id })}
-      onDeleteList={handleDeleteList}
-      onUpdateUserPassword={handleUpdateUserPassword}
-    />
+    <>
+      <OfflineBanner isOnline={isOnline} syncStatus={syncStatus} />
+      {renderCurrentScreen()}
+    </>
   );
 }

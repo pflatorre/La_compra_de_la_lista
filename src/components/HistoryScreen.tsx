@@ -25,6 +25,7 @@ import {
 import { NumericKeypadModal } from './NumericKeypadModal';
 import { CalendarDatePicker } from './CalendarDatePicker';
 import { CostKeypadModal } from './CostKeypadModal';
+import { ShoppingSummaryChart } from './ShoppingSummaryChart';
 
 interface HistoryScreenProps {
   lists: ShoppingList[];
@@ -54,8 +55,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
     null
   );
 
-  // Estados de búsqueda y filtrado
-  const [searchQuery, setSearchQuery] = useState('');
+  // Estados de filtrado por usuario y periodo de fechas
   const [selectedUserFilter, setSelectedUserFilter] = useState('');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
@@ -108,10 +108,8 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
     return Array.from(namesSet).sort((a, b) => a.localeCompare(b, 'es'));
   }, [users, completedLists]);
 
-  // Listas filtradas por búsqueda de usuario/nombre y periodo de fecha de compra (inicio y fin)
+  // Listas filtradas por usuario y periodo de fecha de compra (inicio y fin)
   const filteredLists = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-
     return completedLists.filter((list) => {
       const creator =
         (list.usuarioId
@@ -137,25 +135,12 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
         return false;
       }
 
-      // 2. Filtro por campo de texto (busca por nombre de usuario o nombre de la lista)
-      if (normalizedQuery) {
-        const matchesUser = displayUserName
-          .toLowerCase()
-          .includes(normalizedQuery);
-        const matchesListName = list.nombre
-          .toLowerCase()
-          .includes(normalizedQuery);
-        if (!matchesUser && !matchesListName) {
-          return false;
-        }
-      }
-
-      // 3. Filtro por fecha de inicio (Desde)
+      // 2. Filtro por fecha de inicio (Desde)
       if (startDateFilter && list.fechaCompra < startDateFilter) {
         return false;
       }
 
-      // 4. Filtro por fecha de fin (Hasta)
+      // 3. Filtro por fecha de fin (Hasta)
       if (endDateFilter && list.fechaCompra > endDateFilter) {
         return false;
       }
@@ -165,21 +150,16 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
   }, [
     completedLists,
     users,
-    searchQuery,
     selectedUserFilter,
     startDateFilter,
     endDateFilter,
   ]);
 
   const hasActiveFilters = Boolean(
-    searchQuery.trim() ||
-      selectedUserFilter ||
-      startDateFilter ||
-      endDateFilter
+    selectedUserFilter || startDateFilter || endDateFilter
   );
 
   const handleClearFilters = () => {
-    setSearchQuery('');
     setSelectedUserFilter('');
     setStartDateFilter('');
     setEndDateFilter('');
@@ -480,6 +460,14 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
         </header>
 
         <main className="flex-1 space-y-5">
+          {/* Cuadro de Gráficos históricos con desplegable de usuario, password y gasto últimos 12 meses */}
+          <ShoppingSummaryChart
+            lists={completedLists}
+            users={users}
+            onUpdateUserPassword={onUpdateUserPassword}
+            onGoHome={onGoHome}
+          />
+
           {completedLists.length > 0 && (
             /* Panel de búsqueda por usuario y periodo de fechas (inicio y fin) */
             <section
@@ -504,51 +492,29 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
                 )}
               </div>
 
-              {/* Fila 1: Búsqueda por texto y Selector de usuario */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label
-                    htmlFor="history-search-input"
-                    className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1"
+              {/* Selector de usuario */}
+              <div>
+                <label
+                  htmlFor="history-user-select"
+                  className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1"
+                >
+                  Filtrar por usuario
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <select
+                    id="history-user-select"
+                    value={selectedUserFilter}
+                    onChange={(e) => setSelectedUserFilter(e.target.value)}
+                    className="w-full min-h-[48px] pl-10 pr-8 py-2.5 rounded-2xl bg-stone-50/70 dark:bg-stone-950 border border-stone-300 dark:border-stone-700 text-sm font-medium text-stone-900 dark:text-stone-100 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
                   >
-                    Buscar por usuario o lista
-                  </label>
-                  <div className="relative">
-                    <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      id="history-search-input"
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Ej. Ana, Mercadona..."
-                      className="w-full min-h-[48px] pl-10 pr-3.5 py-2.5 rounded-2xl bg-stone-50/70 dark:bg-stone-950 border border-stone-300 dark:border-stone-700 text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="history-user-select"
-                    className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1"
-                  >
-                    Filtrar por usuario
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <select
-                      id="history-user-select"
-                      value={selectedUserFilter}
-                      onChange={(e) => setSelectedUserFilter(e.target.value)}
-                      className="w-full min-h-[48px] pl-10 pr-8 py-2.5 rounded-2xl bg-stone-50/70 dark:bg-stone-950 border border-stone-300 dark:border-stone-700 text-sm font-medium text-stone-900 dark:text-stone-100 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
-                    >
-                      <option value="">Todos los usuarios</option>
-                      {userFilterOptions.map((uName) => (
-                        <option key={uName} value={uName}>
-                          {uName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    <option value="">Todos los usuarios</option>
+                    {userFilterOptions.map((uName) => (
+                      <option key={uName} value={uName}>
+                        {uName}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

@@ -42,29 +42,41 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   return (
     <div className="min-h-screen flex flex-col">
       <div className="w-full max-w-2xl mx-auto px-4 pt-6 pb-16 flex-1 flex flex-col">
-        {/* 1. Título de la aplicación con logotipo de carro de la compra */}
-        <header className="mb-5 flex items-center gap-3.5">
-          <div
-            aria-hidden="true"
-            className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white flex items-center justify-center shadow-sm shadow-emerald-900/15 shrink-0"
-          >
-            <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.25]" />
-          </div>
-          <div className="min-w-0">
-            <h1
-              className="text-3xl sm:text-4xl font-bold tracking-tight text-stone-900 dark:text-stone-50"
-              style={{ fontFamily: 'var(--font-display)', textWrap: 'balance' }}
+        {/* 1. Título de la aplicación con logotipo de carro de la compra y botón Configuración arriba a la derecha */}
+        <header className="mb-5 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div
+              aria-hidden="true"
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white flex items-center justify-center shadow-sm shadow-emerald-900/15 shrink-0"
             >
-              La Compra de la Lista
-            </h1>
-            <p className="mt-0.5 text-sm text-stone-600 dark:text-stone-400">
-              Crea y gestiona tus listas de la compra...{' '}
-              <em className="italic">by PabloFL</em>
-            </p>
+              <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.25]" />
+            </div>
+            <div className="min-w-0">
+              <h1
+                className="text-3xl sm:text-4xl font-bold tracking-tight text-stone-900 dark:text-stone-50"
+                style={{ fontFamily: 'var(--font-display)', textWrap: 'balance' }}
+              >
+                La Compra de la Lista
+              </h1>
+              <p className="mt-0.5 text-sm text-stone-600 dark:text-stone-400">
+                Crea y gestiona tus listas de la compra...{' '}
+                <em className="italic">by PabloFL</em>
+              </p>
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            aria-label="Configuración"
+            title="Configuración"
+            className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-[0.98] text-stone-700 dark:text-stone-200 border border-stone-200/90 dark:border-stone-800 flex items-center justify-center shadow-xs transition-all shrink-0"
+          >
+            <Settings className="w-5 h-5 text-stone-600 dark:text-stone-300" />
+          </button>
         </header>
 
-        {/* 2. Barra de botones entre el título y las listas */}
+        {/* 2. Barra de botones entre el título y las listas (solo Nueva lista e Histórico) */}
         <nav
           aria-label="Acciones principales"
           className="flex items-center gap-2.5 mb-7"
@@ -81,7 +93,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <button
             type="button"
             onClick={onOpenHistory}
-            className="min-h-[52px] px-4 py-3 rounded-2xl bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-[0.98] text-stone-800 dark:text-stone-200 border border-stone-200/90 dark:border-stone-800 font-semibold text-base flex items-center justify-center gap-2 shadow-xs transition-all whitespace-nowrap"
+            className="flex-1 min-h-[52px] px-4 py-3 rounded-2xl bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-[0.98] text-stone-800 dark:text-stone-200 border border-stone-200/90 dark:border-stone-800 font-semibold text-base flex items-center justify-center gap-2 shadow-xs transition-all whitespace-nowrap"
           >
             <History className="w-5 h-5 text-stone-600 dark:text-stone-400 shrink-0" />
             <span>Histórico</span>
@@ -90,17 +102,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 ({completedCount})
               </span>
             )}
-          </button>
-
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            aria-label="Configuración"
-            title="Configuración"
-            className="min-h-[52px] px-3.5 py-3 rounded-2xl bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-[0.98] text-stone-700 dark:text-stone-200 border border-stone-200/90 dark:border-stone-800 font-semibold text-base flex items-center justify-center gap-2 shadow-xs transition-all shrink-0 whitespace-nowrap"
-          >
-            <Settings className="w-5 h-5 text-stone-600 dark:text-stone-300 shrink-0" />
-            <span className="hidden sm:inline">Configuración</span>
           </button>
         </nav>
 

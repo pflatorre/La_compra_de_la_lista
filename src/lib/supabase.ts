@@ -485,6 +485,106 @@ export async function toggleLineCheckInSupabase(
 }
 
 /**
+ * Sincroniza el estado local (usuarios, catálogo y listas con sus líneas) con Supabase
+ * al recuperar la conexión a internet tras haber operado en modo offline.
+ */
+export async function syncLocalStateToSupabase(data: {
+  lists: ShoppingList[];
+  catalog: string[];
+  users: AppUser[];
+}): Promise<void> {
+  if (!supabase) return;
+
+  // 1. Sincronizar usuarios locales
+  for (const user of data.users) {
+    const shouldRemind = Boolean(
+      user.email && user.email.trim().length > 0 && user.recibirRecordatorio
+    );
+    const { error } = await supabase.from('usuarios').upsert(
+      {
+        id: user.id,
+        nombre: user.nombre,
+        email: user.email || null,
+        recibir_recordatorio: shouldRemind,
+        password: user.password,
+      },
+      { onConflict: 'id' }
+    );
+    if (error) {
+      await supabase.from('usuarios').upsert(
+        {
+          id: user.id,
+          nombre: user.nombre,
+          password: user.password,
+        },
+        { onConflict: 'id' }
+      );
+    }
+  }
+
+  // 2. Sincronizar catálogo local
+  for (const prod of data.catalog) {
+    if (!prod.trim()) continue;
+    await supabase
+      .from('catalogo_productos')
+      .insert({ nombre: prod.trim() });
+  }
+
+  // 3. Sincronizar listas y sus líneas
+  for (const list of data.lists) {
+    const resolvedFechaFinalizacion =
+      list.estado === 'realizada'
+        ? list.fechaFinalizacion || new Date().toISOString()
+        : list.fechaFinalizacion ?? null;
+
+    const payload: Record<string, unknown> = {
+      id: list.id,
+      nombre: list.nombre,
+      fecha_compra: list.fechaCompra,
+      estado: list.estado,
+      fecha_finalizacion: resolvedFechaFinalizacion,
+      usuario_id: list.usuarioId || null,
+      usuario_nombre: list.usuarioNombre || null,
+    };
+    if (typeof list.costeCompra === 'number' && !isNaN(list.costeCompra)) {
+      payload.coste_compra = list.costeCompra;
+    }
+
+    const { error: upsertErr } = await supabase
+      .from('listas_compra')
+      .upsert(payload, { onConflict: 'id' });
+
+    if (upsertErr) {
+      await supabase.from('listas_compra').upsert(
+        {
+          id: list.id,
+          nombre: list.nombre,
+          fecha_compra: list.fechaCompra,
+          estado: list.estado,
+          fecha_finalizacion: resolvedFechaFinalizacion,
+        },
+        { onConflict: 'id' }
+      );
+    }
+
+    if (list.lineas.length > 0) {
+      const linesToUpsert = list.lineas.map((line, idx) => ({
+        id: line.id,
+        lista_id: list.id,
+        nombre_producto: line.nombreProducto,
+        cantidad: line.cantidad,
+        marcado: line.marcado,
+        guardada: true,
+        orden: idx,
+      }));
+      await supabase
+        .from('lineas_compra')
+        .upsert(linesToUpsert, { onConflict: 'id' });
+    }
+  }
+}
+
+/**
  * Verifica que las tablas y vistas REST de Supabase respondan correctamente.
  */
 export async function verifySupabaseRestEndpoints(): Promise<
