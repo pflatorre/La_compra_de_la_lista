@@ -25,6 +25,7 @@ import {
   updateShoppingListInSupabase,
   deleteShoppingListInSupabase,
   updateListStatusInSupabase,
+  updateListCostInSupabase,
   toggleLineCheckInSupabase,
 } from './lib/supabase';
 import { HomeScreen } from './components/HomeScreen';
@@ -371,27 +372,68 @@ export default function App() {
     }
   }, []);
 
-  const handleFinishShopping = useCallback((listId: string) => {
-    const completedAt = new Date().toISOString();
-    setLists((prev) =>
-      prev.map((item) =>
-        item.id === listId
-          ? {
-              ...item,
-              estado: 'realizada',
-              fechaFinalizacion: completedAt,
-            }
-          : item
-      )
-    );
-    setView({ type: 'home' });
+  const handleFinishShopping = useCallback(
+    (listId: string, costeCompra: number = 0) => {
+      const completedAt = new Date().toISOString();
+      const validCost =
+        typeof costeCompra === 'number' && !isNaN(costeCompra) && costeCompra >= 0
+          ? costeCompra
+          : 0;
 
-    if (isSupabaseConfigured) {
-      updateListStatusInSupabase(listId, 'realizada', completedAt).catch(
-        (err) => console.error('Error finalizando compra en Supabase:', err)
+      setLists((prev) =>
+        prev.map((item) =>
+          item.id === listId
+            ? {
+                ...item,
+                estado: 'realizada',
+                fechaFinalizacion: completedAt,
+                costeCompra: validCost,
+              }
+            : item
+        )
       );
-    }
-  }, []);
+      setView({ type: 'home' });
+
+      if (isSupabaseConfigured) {
+        updateListStatusInSupabase(
+          listId,
+          'realizada',
+          completedAt,
+          validCost
+        ).catch((err) =>
+          console.error('Error finalizando compra en Supabase:', err)
+        );
+      }
+    },
+    []
+  );
+
+  const handleUpdateListCost = useCallback(
+    (listId: string, newCost: number) => {
+      const validCost =
+        typeof newCost === 'number' && !isNaN(newCost) && newCost >= 0
+          ? newCost
+          : 0;
+
+      setLists((prev) =>
+        prev.map((item) =>
+          item.id === listId
+            ? {
+                ...item,
+                costeCompra: validCost,
+              }
+            : item
+        )
+      );
+
+      if (isSupabaseConfigured) {
+        updateListCostInSupabase(listId, validCost).catch((err) =>
+          console.error('Error actualizando coste de compra en Supabase:', err)
+        );
+      }
+    },
+    []
+  );
 
   if (view.type === 'settings') {
     return (
@@ -529,6 +571,7 @@ export default function App() {
         onReuseList={(listToReuse) =>
           setView({ type: 'create', templateList: listToReuse })
         }
+        onUpdateListCost={handleUpdateListCost}
         onDeleteList={handleDeleteList}
         onUpdateUserPassword={handleUpdateUserPassword}
         onGoHome={() => setView({ type: 'home' })}

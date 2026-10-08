@@ -8,11 +8,12 @@ import {
 } from 'lucide-react';
 import { ShoppingList } from '../types';
 import { formatSpanishDate } from '../utils/storage';
+import { CostKeypadModal } from './CostKeypadModal';
 
 interface ShoppingModeScreenProps {
   list: ShoppingList;
   onToggleLineCheck: (listId: string, lineId: string) => void;
-  onFinishShopping: (listId: string) => void;
+  onFinishShopping: (listId: string, costeCompra: number) => void;
   onExitShopping: (listId: string) => void;
 }
 
@@ -23,6 +24,7 @@ export const ShoppingModeScreen: React.FC<ShoppingModeScreenProps> = ({
   onExitShopping,
 }) => {
   const [showUncheckedConfirm, setShowUncheckedConfirm] = useState(false);
+  const [showCostKeypad, setShowCostKeypad] = useState(false);
 
   const totalProducts = list.lineas.length;
   const checkedProducts = list.lineas.filter((l) => l.marcado).length;
@@ -34,7 +36,7 @@ export const ShoppingModeScreen: React.FC<ShoppingModeScreenProps> = ({
     if (uncheckedProducts > 0) {
       setShowUncheckedConfirm(true);
     } else {
-      onFinishShopping(list.id);
+      setShowCostKeypad(true);
     }
   };
 
@@ -175,7 +177,11 @@ export const ShoppingModeScreen: React.FC<ShoppingModeScreenProps> = ({
                 type="button"
                 onClick={() => {
                   setShowUncheckedConfirm(false);
-                  onFinishShopping(list.id);
+                  if (checkedProducts === 0) {
+                    onFinishShopping(list.id, 0);
+                  } else {
+                    setShowCostKeypad(true);
+                  }
                 }}
                 className="flex-1 min-h-[48px] px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-semibold text-sm flex items-center justify-center transition-all whitespace-nowrap"
               >
@@ -213,6 +219,18 @@ export const ShoppingModeScreen: React.FC<ShoppingModeScreenProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Teclado numérico para introducir cuánto has gastado al finalizar la compra */}
+      {showCostKeypad && (
+        <CostKeypadModal
+          title="¿Cuánto has gastado en esta compra?"
+          onSave={(cost) => {
+            setShowCostKeypad(false);
+            onFinishShopping(list.id, cost);
+          }}
+          onCancel={() => setShowCostKeypad(false)}
+        />
+      )}
     </div>
   );
 };

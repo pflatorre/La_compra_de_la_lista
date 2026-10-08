@@ -75,6 +75,7 @@ interface DbListaRow {
   fecha_compra: string;
   estado: ShoppingListStatus;
   fecha_finalizacion: string | null;
+  coste_compra?: number | string | null;
   usuario_id?: string | null;
   usuario_nombre?: string | null;
 }
@@ -170,6 +171,9 @@ export async function fetchAllDataFromSupabase(): Promise<{
         lineas: linesByListId.get(row.id) ?? [],
         ...(row.fecha_finalizacion
           ? { fechaFinalizacion: row.fecha_finalizacion }
+          : {}),
+        ...(row.coste_compra !== undefined && row.coste_compra !== null
+          ? { costeCompra: Number(row.coste_compra) || 0 }
           : {}),
         ...(row.usuario_id ? { usuarioId: row.usuario_id } : {}),
         ...(row.usuario_nombre || matchedUser?.nombre
@@ -411,7 +415,8 @@ export async function deleteShoppingListInSupabase(
 export async function updateListStatusInSupabase(
   listId: string,
   estado: ShoppingListStatus,
-  fechaFinalizacion?: string
+  fechaFinalizacion?: string,
+  costeCompra?: number
 ): Promise<void> {
   if (!supabase) return;
   const resolvedFechaFinalizacion =
@@ -419,14 +424,49 @@ export async function updateListStatusInSupabase(
       ? fechaFinalizacion || new Date().toISOString()
       : fechaFinalizacion ?? null;
 
+  const payload: Record<string, unknown> = {
+    estado,
+    fecha_finalizacion: resolvedFechaFinalizacion,
+  };
+  if (typeof costeCompra === 'number' && !isNaN(costeCompra)) {
+    payload.coste_compra = costeCompra;
+  }
+
   const { error } = await supabase
     .from('listas_compra')
-    .update({
-      estado,
-      fecha_finalizacion: resolvedFechaFinalizacion,
-    })
+    .update(payload)
     .eq('id', listId);
-  if (error) throw error;
+
+  // Fallback si la columna coste_compra aún no se ha añadido en Supabase
+  if (error && 'coste_compra' in payload) {
+    const { error: fallbackErr } = await supabase
+      .from('listas_compra')
+      .update({
+        estado,
+        fecha_finalizacion: resolvedFechaFinalizacion,
+      })
+      .eq('id', listId);
+    if (fallbackErr) throw fallbackErr;
+  } else if (error) {
+    throw error;
+  }
+}
+
+export async function updateListCostInSupabase(
+  listId: string,
+  costeCompra: number
+): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('listas_compra')
+    .update({ coste_compra: costeCompra })
+    .eq('id', listId);
+  if (error) {
+    console.warn(
+      'Aviso: ejecuta ALTER TABLE public.listas_compra ADD COLUMN IF NOT EXISTS coste_compra numeric(10,2) DEFAULT 0; en Supabase:',
+      error.message
+    );
+  }
 }
 
 export async function toggleLineCheckInSupabase(

@@ -200,6 +200,16 @@ export function formatCompletedTimestamp(isoStr?: string): string {
   }
 }
 
+export function formatEuros(amount?: number): string {
+  const num =
+    typeof amount === 'number' && !isNaN(amount) && amount >= 0 ? amount : 0;
+  const hasDecimals = Math.round(num * 100) % 100 !== 0;
+  return new Intl.NumberFormat('es-ES', {
+    minimumFractionDigits: hasDecimals ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(num) + ' €';
+}
+
 export function generateId(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();

@@ -23,6 +23,7 @@ export interface ShoppingList {
   estado: ShoppingListStatus;
   lineas: ShoppingLine[];
   fechaFinalizacion?: string; // ISO string when estado === 'realizada'
+  costeCompra?: number; // Coste en euros (€)
   usuarioId?: string;
   usuarioNombre?: string;
 }

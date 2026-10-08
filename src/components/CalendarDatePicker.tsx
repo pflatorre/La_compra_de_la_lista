@@ -7,6 +7,7 @@ interface CalendarDatePickerProps {
   onChange: (newDate: string) => void;
   hasError?: boolean;
   disabled?: boolean;
+  placeholder?: string;
 }
 
 const MONTH_NAMES = [
@@ -31,6 +32,7 @@ export const CalendarDatePicker: React.FC<CalendarDatePickerProps> = ({
   onChange,
   hasError,
   disabled = false,
+  placeholder = 'Selecciona una fecha...',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -156,7 +158,7 @@ export const CalendarDatePicker: React.FC<CalendarDatePickerProps> = ({
                 </span>
               ) : (
                 <span className="text-stone-400 dark:text-stone-500">
-                  Selecciona una fecha...
+                  {placeholder}
                 </span>
               )}
             </div>
