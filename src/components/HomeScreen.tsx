@@ -4,6 +4,7 @@ import {
   History,
   Settings,
   ShoppingBasket,
+  ShoppingCart,
   User,
   FilterX,
 } from 'lucide-react';
@@ -98,14 +99,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3.5 min-w-0">
               <div
-                className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-sm shadow-emerald-950/10 flex items-center justify-center shrink-0"
+                aria-hidden="true"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white flex items-center justify-center shadow-sm shadow-emerald-900/15 shrink-0"
               >
-                <img
-                  src="/src/assets/images/shopping_cart_3d_1793350048745.jpg"
-                  alt="Carrito de la compra en 3D"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-contain p-0.5 select-none"
-                />
+                <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.25]" />
               </div>
               <h1
                 className="text-3xl sm:text-4xl font-bold tracking-tight text-stone-900 dark:text-stone-50"
